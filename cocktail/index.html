@@ -1474,9 +1474,9 @@
             <div class="form-section">
                 <h3>🌐 GAS 連線</h3>
                 <div class="form-group">
-                    <label for="gasUrl">Web App URL（例：https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec）</label>
+                    <label for="gasUrl">Web App URL（例：https://script.google.com/macros/s/XXX/exec）</label>
                     <input type="url" id="gasUrl" placeholder="貼上你的 GAS Web App URL"
-                        value="https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec">
+                        selection="https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec">
                 </div>
                 <div class="form-actions">
                     <button class="btn btn-primary" id="btnSaveGasUrl">儲存連線設定</button>
@@ -1611,20 +1611,23 @@
 
     <script>
         // ===== 正規化工具（避免舊資料型別造成 .split 錯誤） =====
-        const COLS = ['id', 'title', 'category', 'tags', 'ingredients', 'instructions', 'glass_type', 'alcohol_content', 'difficulty', 'servings', 'image_b64'];
+        const COLS = ['id', 'title', 'category', 'tags', 'instructions', 'glass_type', 'alcohol_content', 'difficulty', 'servings', 'image_b64'];
         function normalizeText(v) { if (Array.isArray(v)) return v.join('+'); if (v == null) return ''; return String(v); }
         function normalizeRecord(c = {}) { const out = {}; for (const k of COLS) out[k] = normalizeText(c[k]); return out; }
 
         // ===== IndexedDB：圖片與資料快取 =====
         class MobileStorageManager {
-            constructor() { this.dbName = 'CocktailDB'; this.dbVersion = 2; this.db = null; this.imageStore = 'images'; this.cocktailStore = 'cocktails'; }
-            async init() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onerror = () => reject(req.error); req.onsuccess = () => { this.db = req.result; resolve(this.db); }; req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.cocktailStore)) { const s = db.createObjectStore(this.cocktailStore, { keyPath: 'id' }); s.createIndex('title', 'title', { unique: false }); s.createIndex('category', 'category', { unique: false }); s.createIndex('tags', 'tags', { unique: false }); } if (!db.objectStoreNames.contains(this.imageStore)) { db.createObjectStore(this.imageStore, { keyPath: 'id' }); } }; }); }
+            constructor() { this.dbName = 'CocktailDB'; this.dbVersion = 3; this.db = null; this.imageStore = 'images'; this.cocktailStore = 'cocktails'; this.ingredientsStore = 'ingredients'; }
+            async init() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onerror = () => reject(req.error); req.onsuccess = () => { this.db = req.result; resolve(this.db); }; req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.cocktailStore)) { const s = db.createObjectStore(this.cocktailStore, { keyPath: 'id' }); s.createIndex('title', 'title', { unique: false }); s.createIndex('category', 'category', { unique: false }); s.createIndex('tags', 'tags', { unique: false }); } if (!db.objectStoreNames.contains(this.imageStore)) { db.createObjectStore(this.imageStore, { keyPath: 'id' }); } if (!db.objectStoreNames.contains(this.ingredientsStore)) { const s = db.createObjectStore(this.ingredientsStore, { keyPath: 'id', autoIncrement: true }); s.createIndex('item_id', 'item_id', { unique: false }); } }; }); }
             async saveCocktail(c) { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readwrite'); const st = tx.objectStore('cocktails'); const r = st.put(c); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
             async getAllCocktails() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readonly'); const st = tx.objectStore('cocktails'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
             async deleteCocktail(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readwrite'); const st = tx.objectStore('cocktails'); const r = st.delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
-            async clearAllData() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails', 'images'], 'readwrite'); const a = tx.objectStore('cocktails').clear(); const b = tx.objectStore('images').clear(); let ok = 0; a.onsuccess = () => { ok++; if (ok === 2) res(); }; b.onsuccess = () => { ok++; if (ok === 2) res(); }; a.onerror = b.onerror = (e) => rej(e.target.error); }); }
+            async clearAllData() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails', 'images', 'ingredients'], 'readwrite'); const a = tx.objectStore('cocktails').clear(); const b = tx.objectStore('images').clear(); const c = tx.objectStore('ingredients').clear(); let ok = 0; a.onsuccess = () => { ok++; if (ok === 3) res(); }; b.onsuccess = () => { ok++; if (ok === 3) res(); }; c.onsuccess = () => { ok++; if (ok === 3) res(); }; a.onerror = b.onerror = c.onerror = (e) => rej(e.target.error); }); }
             async saveImage(file, id) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { const imageData = { id, data: reader.result, type: file.type, name: file.name, size: file.size, timestamp: Date.now() }; const tx = this.db.transaction(['images'], 'readwrite'); const st = tx.objectStore('images'); const r = st.put(imageData); r.onsuccess = () => resolve({ id, dataUrl: reader.result }); r.onerror = () => reject(r.error); }; reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
             async getImage(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.get(id); r.onsuccess = () => res(r.result ? r.result.data : null); r.onerror = () => rej(r.error); }); }
+            async saveIngredients(cocktailId, ingredientsList) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readwrite'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('item_id'); const delReq = idx.openCursor(IDBKeyRange.only(cocktailId)); delReq.onsuccess = (ev) => { const cursor = ev.target.result; if (cursor) { st.delete(cursor.primaryKey); cursor.continue(); } }; delReq.onerror = () => rej(delReq.error); tx.oncomplete = () => { const addTx = this.db.transaction([this.ingredientsStore], 'readwrite'); const addSt = addTx.objectStore(this.ingredientsStore); ingredientsList.forEach(ing => { addSt.add({ ...ing, item_id: cocktailId }); }); addTx.onsuccess = () => res(); addTx.onerror = () => rej(addTx.error); }; }); }
+            async getIngredients(cocktailId) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readonly'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('item_id'); const range = IDBKeyRange.only(cocktailId); const r = idx.getAll(range); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
+            async deleteIngredientsByCocktailId(cocktailId) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readwrite'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('item_id'); const r = idx.openCursor(IDBKeyRange.only(cocktailId)); r.onsuccess = (ev) => { const cursor = ev.target.result; if (cursor) { st.delete(cursor.primaryKey); cursor.continue(); } else res(); }; r.onerror = () => rej(r.error); }); }
             async getStorageStats() { const cocktails = await this.getAllCocktails(); const imgs = await new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); const totalImageSize = imgs.reduce((s, i) => s + (i.size || 0), 0); return { cocktailCount: cocktails.length, imageCount: imgs.length, totalImageSize, formattedImageSize: this.formatBytes(totalImageSize) }; }
             formatBytes(bytes, decimals = 2) { if (bytes === 0) return '0 Bytes'; const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]; }
         }
@@ -2316,6 +2319,17 @@
                         ...c,
                         favorite: c.favorite === true  // 确保favorite字段存在
                     }));
+                    
+                    // 為每個 cocktail 讀取配料
+                    for (const c of this.cocktails) {
+                        try {
+                            c.ingredientsList = await this.storage.getIngredients(c.id);
+                        } catch (e) {
+                            console.warn(`讀取配料 ${c.id} 失敗:`, e);
+                            c.ingredientsList = [];
+                        }
+                    }
+                    
                     this.filteredCocktails = [...this.cocktails];
                     this.updateCategories();
                     this.render();
@@ -2331,6 +2345,17 @@
                         ...c,
                         favorite: c.favorite === true  // 确保favorite字段存在
                     }));
+                    
+                    // 為每個 cocktail 讀取配料
+                    for (const c of this.cocktails) {
+                        try {
+                            c.ingredientsList = await this.storage.getIngredients(c.id);
+                        } catch (e) {
+                            console.warn(`讀取配料 ${c.id} 失敗:`, e);
+                            c.ingredientsList = [];
+                        }
+                    }
+                    
                     this.filteredCocktails = [...this.cocktails];
                     this.updateCategories();
                     this.render();
@@ -2349,17 +2374,34 @@
                     const servings = document.getElementById('servings').value.trim();
                     const chips = Array.from(document.querySelectorAll('#tagsDisplay .tag')).map(x => x.dataset.tag);
                     const tags = chips.join(';');
-                    const ingredients = Array.from(document.querySelectorAll('#ingredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
+                    
+                    // 收集配料數據（ingredients, quantity, unit）
+                    const ingredientsList = Array.from(document.querySelectorAll('#ingredientsList .ingredient-item')).map(row => {
+                        const inputs = row.querySelectorAll('input');
+                        return {
+                            ingredients: inputs[0]?.value.trim() || '',
+                            quantity: inputs[1]?.value.trim() || '',
+                            unit: inputs[2]?.value.trim() || ''
+                        };
+                    }).filter(ing => ing.ingredients || ing.quantity || ing.unit);
+                    
                     const instructions = Array.from(document.querySelectorAll('#instructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
-                    // 已取消強制必填：名稱、配料、步驟皆可留空
+                    
                     let image_b64 = '';
                     const imageFile = document.getElementById('cocktailImageFile').files[0];
                     const newId = this.makeId();
                     if (imageFile) { try { const saved = await this.storage.saveImage(imageFile, newId); image_b64 = saved.dataUrl; } catch (err) { console.warn('圖片快取失敗（不影響文字資料）：', err); } }
-                    const rec = { id: newId, title, category, tags, ingredients, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
+                    
+                    const rec = { id: newId, title, category, tags, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
                     const recNorm = normalizeRecord(rec);
                     await gas.upsert(recNorm);
                     await this.storage.saveCocktail(recNorm);
+                    
+                    // 保存配料到 Ingredients 表格
+                    if (ingredientsList.length > 0) {
+                        await this.storage.saveIngredients(newId, ingredientsList);
+                    }
+                    
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.successMessage.style.display = 'block';
@@ -2396,26 +2438,57 @@
                 display.appendChild(chip);
             }
 
-            _makeIngredientRow(value = '') {
+            _makeIngredientRow(value = '', quantity = '', unit = '') {
                 const div = document.createElement('div');
                 div.className = 'ingredient-item';
-                const input = document.createElement('input');
-                input.type = 'text'; input.placeholder = '例如：白蘭地 60ml'; input.value = value;
+                div.style.display = 'flex';
+                div.style.gap = '8px';
+                div.style.marginBottom = '8px';
+                
+                const ingInput = document.createElement('input');
+                ingInput.type = 'text'; 
+                ingInput.placeholder = '材料名稱'; 
+                ingInput.value = value;
+                ingInput.style.flex = '2';
+                
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'text'; 
+                qtyInput.placeholder = '數量'; 
+                qtyInput.value = quantity;
+                qtyInput.style.flex = '1';
+                
+                const unitInput = document.createElement('input');
+                unitInput.type = 'text'; 
+                unitInput.placeholder = '單位'; 
+                unitInput.value = unit;
+                unitInput.style.flex = '1';
+                
                 const btn = document.createElement('button');
-                btn.type = 'button'; btn.className = 'remove-btn'; btn.textContent = '移除';
+                btn.type = 'button'; 
+                btn.className = 'remove-btn'; 
+                btn.textContent = '移除';
                 btn.addEventListener('click', () => div.remove());
-                div.appendChild(input); div.appendChild(btn);
+                
+                div.appendChild(ingInput); 
+                div.appendChild(qtyInput); 
+                div.appendChild(unitInput); 
+                div.appendChild(btn);
                 return div;
             }
 
             renderEditIngredients(list) {
                 const wrap = document.getElementById('editIngredientsList');
                 wrap.innerHTML = '';
-                (list && list.length ? list : ['']).forEach(v => wrap.appendChild(this._makeIngredientRow(v)));
+                (list && list.length ? list : [{}]).forEach(ing => {
+                    const ingredients = typeof ing === 'string' ? ing : (ing.ingredients || '');
+                    const quantity = typeof ing === 'string' ? '' : (ing.quantity || '');
+                    const unit = typeof ing === 'string' ? '' : (ing.unit || '');
+                    wrap.appendChild(this._makeIngredientRow(ingredients, quantity, unit));
+                });
             }
 
             addEditIngredient() {
-                document.getElementById('editIngredientsList').appendChild(this._makeIngredientRow(''));
+                document.getElementById('editIngredientsList').appendChild(this._makeIngredientRow('', '', ''));
             }
 
             _renumberEditInstructions() {
@@ -2469,8 +2542,16 @@
                 String(c.tags || '').split(';').map(t => t.trim()).filter(Boolean)
                     .forEach(t => this._addTagChip(tagsDisplay, t));
 
-                // 配料 / 步驟（與卡片相同的 + 與 > 分隔規則）
-                this.renderEditIngredients(String(c.ingredients || '').split('+').map(s => s.trim()).filter(Boolean));
+                // 配料（從 Ingredients 表格讀取）
+                try {
+                    const ingredientsList = await this.storage.getIngredients(id);
+                    this.renderEditIngredients(ingredientsList);
+                } catch (e) {
+                    console.warn('讀取配料失敗：', e);
+                    this.renderEditIngredients([]);
+                }
+
+                // 步驟
                 this.renderEditInstructions(String(c.instructions || '').split('>').map(s => s.trim()).filter(Boolean));
 
                 // 圖片預覽
@@ -2509,17 +2590,35 @@
                     const difficulty = document.getElementById('editDifficulty').value.trim();
                     const servings = document.getElementById('editServings').value.trim();
                     const tags = Array.from(document.querySelectorAll('#editTagsDisplay .tag')).map(x => x.dataset.tag).join(';');
-                    const ingredients = Array.from(document.querySelectorAll('#editIngredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
+                    
+                    // 收集配料數據（ingredients, quantity, unit）
+                    const ingredientsList = Array.from(document.querySelectorAll('#editIngredientsList .ingredient-item')).map(row => {
+                        const inputs = row.querySelectorAll('input');
+                        return {
+                            ingredients: inputs[0]?.value.trim() || '',
+                            quantity: inputs[1]?.value.trim() || '',
+                            unit: inputs[2]?.value.trim() || ''
+                        };
+                    }).filter(ing => ing.ingredients || ing.quantity || ing.unit);
+                    
                     const instructions = Array.from(document.querySelectorAll('#editInstructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
 
                     const updated = {
                         ...this.cocktails[idx],
                         favorite: this.cocktails[idx].favorite === true,
-                        title, category, glass_type, alcohol_content, difficulty, tags, ingredients, instructions, servings, image_b64
+                        title, category, glass_type, alcohol_content, difficulty, tags, instructions, servings, image_b64
                     };
                     const updatedNorm = normalizeRecord(updated);
                     await gas.upsert(updatedNorm);
                     await this.storage.saveCocktail(updatedNorm);
+                    
+                    // 保存配料到 Ingredients 表格
+                    if (ingredientsList.length > 0) {
+                        await this.storage.saveIngredients(this.editTargetId, ingredientsList);
+                    } else {
+                        await this.storage.deleteIngredientsByCocktailId(this.editTargetId);
+                    }
+                    
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.closeEditDrawer();
@@ -2536,6 +2635,7 @@
                     const id = this.editTargetId;
                     await gas.remove(id);
                     await this.storage.deleteCocktail(id);
+                    await this.storage.deleteIngredientsByCocktailId(id);
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.closeEditDrawer();
@@ -2547,13 +2647,23 @@
                 }
             }
 
-            addIngredient() { const wrap = document.getElementById('ingredientsList'); const div = document.createElement('div'); div.className = 'ingredient-item'; div.innerHTML = `<input type="text" placeholder="例如：紅酒 60ml" /><button type="button" class="remove-btn">移除</button>`; div.querySelector('.remove-btn').addEventListener('click', () => div.remove()); wrap.appendChild(div); }
+            addIngredient() { 
+                document.getElementById('ingredientsList').appendChild(this._makeIngredientRow('', '', '')); 
+            }
             removeIngredient(btn) { btn.closest('.ingredient-item')?.remove(); }
 
             addInstruction() { const wrap = document.getElementById('instructionsList'); const idx = wrap.querySelectorAll('.instruction-item').length + 1; const div = document.createElement('div'); div.className = 'instruction-item'; div.innerHTML = `<span style="font-weight:bold;min-width:30px;">${idx}.</span><input type="text" placeholder="詳細描述步驟" /><button type="button" class="remove-btn">移除</button>`; div.querySelector('.remove-btn').addEventListener('click', () => { div.remove(); Array.from(wrap.querySelectorAll('.instruction-item span')).forEach((s, i) => s.textContent = (i + 1) + '.'); }); wrap.appendChild(div); }
             removeInstruction(btn) { btn.closest('.instruction-item')?.remove(); }
 
-            clearForm() { document.getElementById('addCocktailForm').reset(); document.getElementById('tagsDisplay').innerHTML = ''; document.getElementById('addImagePreview').innerHTML = ''; document.getElementById('ingredientsList').innerHTML = `<div class="ingredient-item"><input type="text" placeholder="例如：紅酒 60ml" /><button type="button" class="remove-btn" onclick="app.removeIngredient(this)">移除</button></div>`; document.getElementById('instructionsList').innerHTML = `<div class="instruction-item"><span style="font-weight: bold; min-width: 30px;">1.</span><input type="text" placeholder="詳細描述第一個步驟" /><button type="button" class="remove-btn" onclick="app.removeInstruction(this)">移除</button></div>`; }
+            clearForm() { 
+                document.getElementById('addCocktailForm').reset(); 
+                document.getElementById('tagsDisplay').innerHTML = ''; 
+                document.getElementById('addImagePreview').innerHTML = ''; 
+                const ingredientsList = document.getElementById('ingredientsList');
+                ingredientsList.innerHTML = '';
+                ingredientsList.appendChild(this._makeIngredientRow('', '', ''));
+                document.getElementById('instructionsList').innerHTML = `<div class="instruction-item"><span style="font-weight: bold; min-width: 30px;">1.</span><input type="text" placeholder="詳細描述第一個步驟" /><button type="button" class="remove-btn" onclick="app.removeInstruction(this)">移除</button></div>`; 
+            }
 
             updateCategories() { const sel = document.getElementById('categorySelect'); if (!sel) return; const categories = [...new Set(this.cocktails.map(r => (r.category || '').trim()).filter(Boolean))].sort(); sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove()); categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt); }); }
 
@@ -2568,13 +2678,18 @@
                 this.filteredCocktails = this.cocktails.filter(r => {
                     const title = this.norm(r?.title);
                     const tags = this.norm(r?.tags);
-                    const ingredients = this.norm(r?.ingredients);
                     const category = (r?.category || '').trim();
+                    
+                    // 從 ingredientsList 搜索配料
+                    const ingredientsText = (r?.ingredientsList || [])
+                        .map(ing => ing.ingredients || '')
+                        .join(' ')
+                        .toLowerCase();
 
                     const matchesSearch = !searchTerm ||
                         title.includes(searchTerm) ||
                         tags.includes(searchTerm) ||
-                        ingredients.includes(searchTerm);
+                        ingredientsText.includes(searchTerm);
 
                     const matchesCategory = !selectedCategory || category === selectedCategory;
                     const matchesFavorite = !favoriteOnly || (r?.favorite === true);
@@ -2708,7 +2823,13 @@
                 container.innerHTML = this.filteredCocktails.map(c => {
                     const tagsHtml = (c.tags ? String(c.tags).split(';').map(tag => `<span class="tag">${tag.trim()}</span>`).join('') : '');
                     const glassType = c.glass_type || '', alcoholContent = c.alcohol_content || '', difficulty = c.difficulty || '';
-                    const ingredientsList = Array.isArray(c.ingredients) ? c.ingredients : String(c.ingredients ?? '').split('+');
+                    
+                    // 配料列表 - 從 ingredientsList 讀取
+                    const ingredientsList = c.ingredientsList || [];
+                    const ingredientsHtml = ingredientsList.length > 0
+                        ? ingredientsList.map(ing => `<div>• ${ing.ingredients || ''} ${ing.quantity ? ing.quantity + ' ' + (ing.unit || '') : ''}</div>`).join('')
+                        : '';
+                    
                     const instructionsList = Array.isArray(c.instructions) ? c.instructions : String(c.instructions ?? '').split('>');
                     return `
         <div class="cocktail-card">
@@ -2727,7 +2848,7 @@
             </div>
             ${tagsHtml ? `<div class="cocktail-tags">${tagsHtml}</div>` : ''}
             <div class="cocktail-details">
-              <details><summary>🥃 配料清單</summary><div class="ingredients-list">${ingredientsList.filter(Boolean).map(i => `<div>• ${String(i).trim()}</div>`).join('')}</div></details>
+              <details><summary>🥃 配料清單</summary><div class="ingredients-list">${ingredientsHtml || '<div style="color: #999;">暫無配料</div>'}</div></details>
               <details><summary>🍴 調製方法</summary><div class="instructions-list">${instructionsList.filter(Boolean).map(s => `<div class="instruction">${String(s).trim()}</div>`).join('')}</div></details>
             </div>
           </div>
@@ -2781,11 +2902,35 @@
                 for (const c of all) {
                     const fixed = normalizeRecord(c);
                     await this.storage.saveCocktail(fixed);
+                    
+                    // 如果舊數據中有 ingredients 欄位，嘗試遷移到 Ingredients 表格
+                    if (c.ingredients) {
+                        const oldIngredients = String(c.ingredients).split('+').map(s => s.trim()).filter(Boolean);
+                        const ingredientsList = oldIngredients.map(ing => ({
+                            ingredients: ing,
+                            quantity: '',
+                            unit: ''
+                        }));
+                        if (ingredientsList.length > 0) {
+                            await this.storage.saveIngredients(c.id, ingredientsList);
+                        }
+                    }
                 }
                 this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
                     ...c,
                     favorite: c.favorite === true  // 确保favorite字段存在
                 }));
+                
+                // 為每個 cocktail 讀取配料
+                for (const c of this.cocktails) {
+                    try {
+                        c.ingredientsList = await this.storage.getIngredients(c.id);
+                    } catch (e) {
+                        console.warn(`讀取配料 ${c.id} 失敗:`, e);
+                        c.ingredientsList = [];
+                    }
+                }
+                
                 this.filteredCocktails = [...this.cocktails];
                 this.render();
                 alert('✅ 已完成本機資料格式遷移');
