@@ -1882,10 +1882,12 @@
                 }
             },
 
-            async upsert(data) {
+            async upsert(data, token) {
                 this.showConnectionStatus('正在儲存到雲端…', 'info');
                 try {
-                    const json = await this._request({ method: 'POST', body: { action: 'upsert', data }, label: '儲存' });
+                    const body = { action: 'upsert', data };
+                    if (token) body.accessToken = token;  // 帶上 token 進行授權
+                    const json = await this._request({ method: 'POST', body, label: '儲存' });
                     if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
                     this.showConnectionStatus('✅ 儲存成功', 'success');
                     return json.id;
@@ -1895,10 +1897,12 @@
                 }
             },
 
-            async remove(id) {
+            async remove(id, token) {
                 this.showConnectionStatus('正在刪除…', 'info');
                 try {
-                    const json = await this._request({ method: 'POST', body: { action: 'delete', id }, label: '刪除' });
+                    const body = { action: 'delete', id };
+                    if (token) body.accessToken = token;  // 帶上 token 進行授權
+                    const json = await this._request({ method: 'POST', body, label: '刪除' });
                     if (!json.ok) throw new Error(json.error || 'delete 操作失敗');
                     this.showConnectionStatus('✅ 刪除成功', 'success');
                     return true;
@@ -2426,7 +2430,7 @@
                     
                     const rec = { id: newId, title, category, tags, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
                     const recNorm = normalizeRecord(rec);
-                    await gas.upsert(recNorm);
+                    await gas.upsert(recNorm, adminAuth.adminToken);  // ← 傳遞 token
                     await this.storage.saveCocktail(recNorm);
                     
                     // 保存配料到 Ingredients 表格
@@ -2641,7 +2645,7 @@
                         title, category, glass_type, alcohol_content, difficulty, tags, instructions, servings, image_b64
                     };
                     const updatedNorm = normalizeRecord(updated);
-                    await gas.upsert(updatedNorm);
+                    await gas.upsert(updatedNorm, adminAuth.adminToken);  // ← 傳遞 token
                     await this.storage.saveCocktail(updatedNorm);
                     
                     // 保存配料到 Ingredients 表格
@@ -2665,7 +2669,7 @@
             async deleteCocktail() {
                 try {
                     const id = this.editTargetId;
-                    await gas.remove(id);
+                    await gas.remove(id, adminAuth.adminToken);  // ← 傳遞 token
                     await this.storage.deleteCocktail(id);
                     await this.storage.deleteIngredientsByCocktailId(id);
                     await this.pullFromCloud({ silent: true });
