@@ -1870,22 +1870,26 @@
             },
 
             async upsert(data) {
-                this.showConnectionStatus('正在儲存到雲端…', 'info');
-                try {
-                    const json = await this._request({ method: 'POST', body: { action: 'upsert', data }, label: '儲存' });
-                    if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
-                    this.showConnectionStatus('✅ 儲存成功', 'success');
-                    return json.id;
-                } catch (error) {
-                    this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error');
-                    throw error;
-                }
-            },
+    this.showConnectionStatus('正在儲存到雲端…', 'info');
+    try {
+        const json = await this._request({
+            method: 'POST',
+            body: { action: 'upsert', data, accessToken: adminAuth.adminToken || '' }, // ← 加這個
+            label: '儲存'
+        });
+        if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
+        this.showConnectionStatus('✅ 儲存成功', 'success');
+        return json.id;
+    } catch (error) {
+        this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error');
+        throw error;
+    }
+},
 
             async remove(id) {
                 this.showConnectionStatus('正在刪除…', 'info');
                 try {
-                    const json = await this._request({ method: 'POST', body: { action: 'delete', id }, label: '刪除' });
+                    const json = await this._request({ method: 'POST', body: { action: 'delete', id, accessToken: adminAuth.adminToken || '' }, label: '刪除' });
                     if (!json.ok) throw new Error(json.error || 'delete 操作失敗');
                     this.showConnectionStatus('✅ 刪除成功', 'success');
                     return true;
