@@ -1476,8 +1476,9 @@
                 <div class="form-group">
                     <label for="gasUrl">Web App URL（例：https://script.google.com/macros/s/XXX/exec）</label>
                     <input type="url" id="gasUrl" placeholder="貼上你的 GAS Web App URL"
-                        selection="https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec">
-                </div>
+                        selection="https://script.google.com/macros/s/AKfycbwksg0oiOee_zOw4y-Tu_p7X8yDeUOB4jf4Q3iI-xZcCBNWnxEKVmNmsFfp-g8vKCik/exec">
+                    <!-- selection="https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec"> -->
+                    </div>
                 <div class="form-actions">
                     <button class="btn btn-primary" id="btnSaveGasUrl">儲存連線設定</button>
                     <button class="btn btn-secondary" id="btnTestGas">測試連線</button>
@@ -1869,27 +1870,35 @@
                 }
             },
 
+            async listIngredients() {
+                try {
+                    const json = await this._request({ method: 'GET', query: { action: 'list_ingredients' }, label: '讀取配料清單' });
+                    if (!json.ok) throw new Error(json.error || 'listIngredients 操作失敗');
+                    const data = json.data || [];
+                    return data;
+                } catch (error) {
+                    console.warn('⌫ 配料清單讀取失敗：', error.message);
+                    return [];
+                }
+            },
+
             async upsert(data) {
-    this.showConnectionStatus('正在儲存到雲端…', 'info');
-    try {
-        const json = await this._request({
-            method: 'POST',
-            body: { action: 'upsert', data, accessToken: adminAuth.adminToken || '' }, // ← 加這個
-            label: '儲存'
-        });
-        if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
-        this.showConnectionStatus('✅ 儲存成功', 'success');
-        return json.id;
-    } catch (error) {
-        this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error');
-        throw error;
-    }
-},
+                this.showConnectionStatus('正在儲存到雲端…', 'info');
+                try {
+                    const json = await this._request({ method: 'POST', body: { action: 'upsert', data }, label: '儲存' });
+                    if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
+                    this.showConnectionStatus('✅ 儲存成功', 'success');
+                    return json.id;
+                } catch (error) {
+                    this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error');
+                    throw error;
+                }
+            },
 
             async remove(id) {
                 this.showConnectionStatus('正在刪除…', 'info');
                 try {
-                    const json = await this._request({ method: 'POST', body: { action: 'delete', id, accessToken: adminAuth.adminToken || '' }, label: '刪除' });
+                    const json = await this._request({ method: 'POST', body: { action: 'delete', id }, label: '刪除' });
                     if (!json.ok) throw new Error(json.error || 'delete 操作失敗');
                     this.showConnectionStatus('✅ 刪除成功', 'success');
                     return true;
@@ -2319,9 +2328,28 @@
                     const data = await gas.list();
                     const norm = data.map(normalizeRecord);
                     for (const c of norm) await this.storage.saveCocktail(c);
+                    
+                    // 同步 Ingredients 表（從後端）
+                    const ingredientsData = await gas.listIngredients();
+                    if (ingredientsData.length > 0) {
+                        // 按 id 分組，然後保存
+                        const groupedByid = {};
+                        ingredientsData.forEach(ing => {
+                            if (!groupedByid[ing.id]) {
+                                groupedByid[ing.id] = [];
+                            }
+                            groupedByid[ing.id].push(ing);
+                        });
+                        
+                        // 為每個 cocktail 保存配料
+                        for (const [cocktailId, ingredientsList] of Object.entries(groupedByid)) {
+                            await this.storage.saveIngredients(cocktailId, ingredientsList);
+                        }
+                    }
+                    
                     this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
                         ...c,
-                        favorite: c.favorite === true  // 确保favorite字段存在
+                        favorite: c.favorite === true
                     }));
                     
                     // 為每個 cocktail 讀取配料
@@ -2347,7 +2375,7 @@
                     }
                     this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
                         ...c,
-                        favorite: c.favorite === true  // 确保favorite字段存在
+                        favorite: c.favorite === true
                     }));
                     
                     // 為每個 cocktail 讀取配料
