@@ -2430,10 +2430,11 @@
                     
                     const rec = { id: newId, title, category, tags, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
                     const recNorm = normalizeRecord(rec);
-                    await gas.upsert(recNorm, adminAuth.adminToken);  // ← 傳遞 token
+                    // ✅ 送雲端時附上配料陣列：normalizeRecord 不含 ingredients，需在這裡補回，後端才會寫入 Ingredients 子表
+                    await gas.upsert({ ...recNorm, ingredients: ingredientsList }, adminAuth.adminToken);  // ← 傳遞 token
                     await this.storage.saveCocktail(recNorm);
                     
-                    // 保存配料到 Ingredients 表格
+                    // 保存配料到 Ingredients 表格（本機快取）
                     if (ingredientsList.length > 0) {
                         await this.storage.saveIngredients(newId, ingredientsList);
                     }
@@ -2645,10 +2646,11 @@
                         title, category, glass_type, alcohol_content, difficulty, tags, instructions, servings, image_b64
                     };
                     const updatedNorm = normalizeRecord(updated);
-                    await gas.upsert(updatedNorm, adminAuth.adminToken);  // ← 傳遞 token
+                    // ✅ 同上：附上配料陣列。空陣列代表「清空」，後端會刪掉該酒所有成份
+                    await gas.upsert({ ...updatedNorm, ingredients: ingredientsList }, adminAuth.adminToken);  // ← 傳遞 token
                     await this.storage.saveCocktail(updatedNorm);
                     
-                    // 保存配料到 Ingredients 表格
+                    // 保存配料到 Ingredients 表格（本機快取）
                     if (ingredientsList.length > 0) {
                         await this.storage.saveIngredients(this.editTargetId, ingredientsList);
                     } else {
