@@ -1,259 +1,109 @@
-const CACHE_NAME = 'cocktail-app-v1.0.0';
-const STATIC_CACHE = 'cocktail-static-v1.0.0';
-const DYNAMIC_CACHE = 'cocktail-dynamic-v1.0.0';
+/* ============================================================
+ * 雞尾酒譜 PWA Service Worker
+ * 策略重點：
+ *   1) 只快取「本站靜態檔案」（index.html、manifest、圖示、字型）。
+ *   2) 絕不快取 GAS API（script.google.com）的任何請求 —— 那些帶登入
+ *      token 且需即時資料，一旦快取會回傳過期或他人資料，非常危險。
+ *   3) 只處理 GET；POST（登入／新增／刪除）一律直接放行到網路。
+ *   4) 導覽請求採 network-first，離線時回退到快取的 index.html。
+ *
+ * ★ 改版時請把 CACHE_VERSION 加一，使用者下次開啟就會自動更新快取。
+ * ============================================================ */
 
-// 需要快取的靜態資源
-const STATIC_ASSETS = [
+const CACHE_VERSION = 'v1';
+const SHELL_CACHE = `cocktail-shell-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `cocktail-runtime-${CACHE_VERSION}`;
+
+// 應用外殼：安裝時預先快取，確保離線可開啟
+const SHELL_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js'
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-192-maskable.png',
+  './icons/icon-512-maskable.png'
 ];
 
-// 安裝 Service Worker
+// 允許執行階段快取的跨網域靜態資源（Google 字型）
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+
+// ---------- 安裝：預快取外殼 ----------
 self.addEventListener('install', (event) => {
-  console.log('Service Worker 安裝中...');
-  
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('快取靜態資源...');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        return self.skipWaiting(); // 立即啟用新版本
-      })
-      .catch((error) => {
-        console.error('安裝 Service Worker 失敗:', error);
-      })
+    caches.open(SHELL_CACHE)
+      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
+      .catch((err) => console.warn('[SW] 預快取失敗（不影響線上使用）：', err))
   );
 });
 
-// 啟用 Service Worker
+// ---------- 啟用：清除舊版快取 ----------
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker 啟用中...');
-  
   event.waitUntil(
-    Promise.all([
-      // 清理舊快取
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-              console.log('刪除舊快取:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      }),
-      // 立即控制所有客戶端
-      self.clients.claim()
-    ])
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys.filter((k) => k !== SHELL_CACHE && k !== RUNTIME_CACHE)
+            .map((k) => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// 攔截網路請求
+// ---------- 攔截請求 ----------
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
 
-  // 忽略 Chrome extension 請求
-  if (url.protocol === 'chrome-extension:') {
+  // 只處理 GET；POST/PUT/DELETE（含 GAS 寫入、登入）直接放行
+  if (request.method !== 'GET') return;
+
+  let url;
+  try { url = new URL(request.url); }
+  catch (e) { return; }
+
+  // 跨網域請求
+  if (url.origin !== self.location.origin) {
+    // 字型：cache-first（靜態、可安全快取，改善離線外觀）
+    if (FONT_HOSTS.includes(url.hostname)) {
+      event.respondWith(cacheFirst(request, RUNTIME_CACHE));
+    }
+    // 其餘跨網域（尤其是 GAS API script.google.com）→ 不介入，走原生網路
     return;
   }
 
-  // 忽略 data: URL
-  if (url.protocol === 'data:') {
-    return;
-  }
-
-  // 處理 HTML 頁面 - 網路優先，失敗時使用快取
-  if (request.destination === 'document') {
-    event.respondWith(networkFirst(request));
-    return;
-  }
-
-  // 處理靜態資源 - 快取優先
-  if (STATIC_ASSETS.some(asset => {
-    try {
-      return url.href.includes(asset) || url.pathname.endsWith(asset);
-    } catch (e) {
-      return false;
-    }
-  })) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  // 處理圖片資源 - 快取優先
-  if (request.destination === 'image') {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  // 處理其他資源 - 網路優先
-  event.respondWith(networkFirst(request));
-});
-
-// 快取優先策略
-async function cacheFirst(request) {
-  try {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      // 只快取成功的 GET 請求
-      if (request.method === 'GET') {
-        cache.put(request, networkResponse.clone());
-      }
-    }
-    return networkResponse;
-  } catch (error) {
-    console.error('快取優先策略失敗:', error);
-    
-    // 嘗試返回快取的版本
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // 如果是圖片請求，返回一個佔位符
-    if (request.destination === 'image') {
-      return new Response('', {
-        status: 200,
-        statusText: 'OK',
-        headers: {
-          'Content-Type': 'image/svg+xml'
-        }
-      });
-    }
-
-    return new Response('離線模式下無法載入此資源', {
-      status: 503,
-      statusText: 'Service Unavailable',
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8'
-      }
-    });
-  }
-}
-
-// 網路優先策略
-async function networkFirst(request) {
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      // 只快取成功的 GET 請求
-      if (request.method === 'GET') {
-        cache.put(request, networkResponse.clone());
-      }
-    }
-    return networkResponse;
-  } catch (error) {
-    console.error('網路請求失敗，嘗試使用快取:', error);
-    const cachedResponse = await caches.match(request);
-    
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    // 如果是 HTML 請求且沒有快取，返回主頁面
-    if (request.destination === 'document') {
-      const mainPage = await caches.match('./');
-      if (mainPage) {
-        return mainPage;
-      }
-    }
-
-    return new Response(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>離線模式</title>
-        <style>
-          body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-            padding: 50px 20px;
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-          }
-          .icon { font-size: 4rem; margin-bottom: 20px; }
-          h1 { margin: 20px 0; }
-          p { opacity: 0.8; line-height: 1.6; max-width: 400px; }
-          .retry-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            margin-top: 20px;
-            cursor: pointer;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="icon">📡</div>
-        <h1>目前處於離線模式</h1>
-        <p>無法連接到網路，但您仍可以使用已快取的功能。請檢查網路連線後重試。</p>
-        <button class="retry-btn" onclick="window.location.reload()">重新載入</button>
-      </body>
-      </html>
-    `, {
-      status: 200,
-      statusText: 'OK',
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8'
-      }
-    });
-  }
-}
-
-// 清理過期快取
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-  
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
-      })
+  // 同網域導覽請求（開啟頁面）→ network-first，離線回退 index.html
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((resp) => {
+          // 更新外殼快取中的 index.html
+          const copy = resp.clone();
+          caches.open(SHELL_CACHE).then((c) => c.put('./index.html', copy)).catch(() => {});
+          return resp;
+        })
+        .catch(() => caches.match('./index.html').then((r) => r || caches.match('./')))
     );
+    return;
   }
+
+  // 同網域其他靜態資源（圖示、manifest 等）→ cache-first
+  event.respondWith(cacheFirst(request, SHELL_CACHE));
 });
 
-// 限制快取大小
-async function limitCacheSize(cacheName, maxItems) {
-  const cache = await caches.open(cacheName);
-  const keys = await cache.keys();
-  
-  if (keys.length > maxItems) {
-    // 刪除最舊的項目
-    const deleteCount = keys.length - maxItems;
-    for (let i = 0; i < deleteCount; i++) {
-      await cache.delete(keys[i]);
+// ---------- 工具：cache-first ----------
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const resp = await fetch(request);
+    // 僅快取成功或不透明（跨網域字型）回應
+    if (resp && (resp.ok || resp.type === 'opaque')) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, resp.clone()).catch(() => {});
     }
+    return resp;
+  } catch (err) {
+    // 離線且無快取：回傳一個簡單錯誤回應，避免整頁崩潰
+    return new Response('', { status: 504, statusText: 'Offline' });
   }
 }
-
-// 定期清理快取
-setInterval(() => {
-  limitCacheSize(DYNAMIC_CACHE, 50);
-}, 60000); // 每分鐘檢查一次
