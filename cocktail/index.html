@@ -342,12 +342,29 @@
             font-size: .9rem;
         }
 
-        /* ============ 訪客模式隱藏編輯 ============ */
-        .guest-mode .edit-only {
+        /* ============ 依權限顯示/隱藏編輯元件 ============ */
+        /* 收藏鈕永遠可見；其餘卡片按鈕（編輯）在訪客模式隱藏 */
+        .guest-mode .cocktail-card .btn {
             display: none !important;
         }
+        .guest-mode .cocktail-card .btn.favorite-toggle {
+            display: inline-flex !important;
+        }
 
-        .guest-mode .cocktail-card .btn {
+        /* .cocktail-write-only：需要 write_cocktail 權限；預設隱藏，具權限時由 body.can-write-cocktail 顯示 */
+        .cocktail-write-only { display: none !important; }
+        body.can-write-cocktail .cocktail-write-only { display: inline-flex !important; }
+
+        /* .ingredient-write-only：需要 write_ingredient 權限 */
+        .ingredient-write-only { display: none !important; }
+        body.can-write-ingredient .ingredient-write-only { display: revert !important; }
+
+        /* .glass-write-only：需要 write_glass 權限 */
+        .glass-write-only { display: none !important; }
+        body.can-write-glass .glass-write-only { display: revert !important; }
+
+        /* 舊的 .edit-only：仍代表「登入後可見」，在訪客模式隱藏（相容既有標記） */
+        .guest-mode .edit-only {
             display: none !important;
         }
 
@@ -636,6 +653,7 @@
             border: 1px solid var(--hairline);
             border-radius: 30px;
             backdrop-filter: blur(10px);
+            flex-wrap: wrap;
         }
 
         .nav-btn {
@@ -674,6 +692,10 @@
         .nav-btn.edit-disabled {
             opacity: .5;
             cursor: not-allowed;
+        }
+
+        .nav-btn.role-hidden {
+            display: none !important;
         }
 
         /* ============ 分頁 ============ */
@@ -1152,6 +1174,86 @@
             display: none !important;
         }
 
+        /* ============ 全站登入閘門 ============ */
+        .auth-gate {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background:
+                radial-gradient(800px 500px at 20% 0%, rgba(212, 164, 96, .22), transparent 60%),
+                radial-gradient(700px 520px at 90% 20%, rgba(150, 70, 55, .18), transparent 58%),
+                var(--bg-base);
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* 未登入時：顯示閘門、隱藏主要 App（頂部列與內容） */
+        body.logged-out .auth-gate { display: flex; }
+        body.logged-out .topbar,
+        body.logged-out .container { display: none !important; }
+
+        .auth-gate-card {
+            background: var(--card);
+            color: var(--card-ink);
+            width: min(400px, 94vw);
+            border-radius: 20px;
+            padding: 34px 30px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .auth-gate-brand {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: var(--card-ink);
+            margin-bottom: 4px;
+        }
+
+        .auth-gate-sub {
+            color: var(--card-muted);
+            font-size: .95rem;
+            margin-bottom: 20px;
+        }
+
+        .auth-gate-card .form-group {
+            text-align: left;
+            margin-bottom: 14px;
+        }
+
+        .auth-gate-card label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--card-ink);
+        }
+
+        .auth-gate-card input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--card-line);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: #fff;
+        }
+
+        .auth-gate-card input:focus {
+            outline: none;
+            border-color: var(--accent-deep);
+            box-shadow: 0 0 0 3px rgba(169, 116, 58, .15);
+        }
+
+        .auth-gate-hint {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid var(--card-line);
+            font-size: .8rem;
+            color: var(--card-muted);
+            line-height: 1.6;
+        }
+
         /* ============ 收藏按鈕 ============ */
         .favorite-btn {
             transition: all .3s ease;
@@ -1232,6 +1334,108 @@
             background: rgba(169, 116, 58, .12);
             color: var(--accent-deep);
         }
+
+        /* ============ 新增：資料表格（配料庫 / 稽核紀錄 / 系統設定）============ */
+        .data-table-wrap {
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow-x: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--card-ink);
+            font-size: .92rem;
+            min-width: 560px;
+        }
+
+        table.data-table th,
+        table.data-table td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-line);
+            vertical-align: top;
+        }
+
+        table.data-table th {
+            background: rgba(169, 116, 58, .1);
+            color: var(--accent-deep);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        table.data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.data-table tbody tr:hover {
+            background: rgba(212, 164, 96, .06);
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .pill.success {
+            background: #d8ecd4;
+            color: #2f6a2a;
+        }
+
+        .pill.fail {
+            background: var(--danger-soft);
+            color: #7a2e1f;
+        }
+
+        .pill.role {
+            background: rgba(169, 116, 58, .12);
+            color: var(--accent-deep);
+        }
+
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 220px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--card-line);
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-row .config-key {
+            font-weight: 700;
+            color: var(--card-ink);
+        }
+
+        .config-row .config-desc {
+            font-size: .78rem;
+            color: var(--card-muted);
+            display: block;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 640px) {
+            .config-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
     <!-- 字型：線上載入，離線自動退回優雅襯線/系統字型 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1242,6 +1446,39 @@
 </head>
 
 <body>
+    <!-- 【前後端拆分版】本頁由『前端 WebApp 專案』的 doGet 以樣板注入「API 專案」的 /exec 網址。
+         前端專案的 Code.gs 內設定 API_URL 常數，透過 <?= apiUrl ?> 帶入此處的 window.__API_URL__。
+         若未透過 GAS 部署（例如本機直接開啟 HTML），apiUrl 會是空字串，
+         此時會退回讀取 localStorage 的 gasUrl，仍可手動指定 API 網址。 -->
+    <script>
+        window.__API_URL__ = "<?= apiUrl ?>";
+    </script>
+
+    <!-- 全站登入閘門：未登入時覆蓋整個畫面，登入後才顯示 App -->
+    <div id="authGate" class="auth-gate">
+        <div class="auth-gate-card">
+            <div class="auth-gate-brand">🍸 雞尾酒譜</div>
+            <p class="auth-gate-sub">請先登入以瀏覽內容</p>
+            <div id="authGateError" class="admin-error" style="display:none;"></div>
+            <div id="authGateSuccess" class="admin-success" style="display:none;"></div>
+            <form id="authGateForm">
+                <div class="form-group">
+                    <label for="authGateUsername">帳號</label>
+                    <input type="text" id="authGateUsername" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="authGatePassword">密碼</label>
+                    <input type="password" id="authGatePassword" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login" style="width:100%;margin-top:8px;">登入</button>
+            </form>
+            <div class="auth-gate-hint">
+                <p>任何啟用中的帳號皆可登入（含一般用戶）。</p>
+                <p>預設管理員：admin / cocktail2024（首次使用請盡快改密碼）</p>
+            </div>
+        </div>
+    </div>
+
     <!-- 管理員登入彈窗 -->
     <div id="adminLoginModal" class="admin-login-modal">
         <div class="admin-login-form">
@@ -1310,14 +1547,17 @@
             <p class="subtitle">探索經典調酒，享受品味時光</p>
             <div class="age-warning">⚠️ 未滿18歲請勿飲酒，飲酒過量有害健康</div>
             <nav class="nav-tabs">
-                <button class="nav-btn active" data-page="settings" type="button">⚙️ 設定</button>
-                <button class="nav-btn" data-page="browse" type="button">📖 瀏覽酒譜</button>
-                <button class="nav-btn" data-page="add" type="button">➕ 新增酒譜</button>
+                <button class="nav-btn active" data-page="browse" type="button">📖 瀏覽酒譜</button>
+                <button class="nav-btn" data-page="add" data-perm="write_cocktail" type="button">➕ 新增酒譜</button>
+                <button class="nav-btn" data-page="ingredients" type="button">🧂 配料庫</button>
+                <button class="nav-btn" data-page="glasses" type="button">🥃 杯型</button>
+                <button class="nav-btn role-hidden" data-page="audit" data-perm="view_audit" type="button">📜 稽核紀錄</button>
+                <button class="nav-btn role-hidden" data-page="config" data-perm="manage_config" type="button">⚙️ 系統設定</button>
             </nav>
         </header>
 
         <!-- 瀏覽區 -->
-        <div class="page" id="browsePage">
+        <div class="page active" id="browsePage">
             <div class="filters">
                 <div class="filter-row">
                     <input type="text" id="searchInput" placeholder="🔍 搜尋酒譜名稱、基酒或材料（如：鳳梨）..." />
@@ -1382,14 +1622,7 @@
                                 <label for="glassType">杯型</label>
                                 <select id="glassType">
                                     <option value="">選擇杯型</option>
-                                    <option value="馬丁尼杯">馬丁尼杯</option>
-                                    <option value="威士忌杯">威士忌杯</option>
-                                    <option value="高球杯">高球杯</option>
-                                    <option value="岩石杯">岩石杯</option>
-                                    <option value="香檳杯">香檳杯</option>
-                                    <option value="颶風杯">颶風杯</option>
-                                    <option value="雞尾酒杯">雞尾酒杯</option>
-                                    <option value="柯林杯">柯林杯</option>
+                                    <!-- 杯型選項由 Glasses 資料表動態載入 -->
                                 </select>
                             </div>
                         </div>
@@ -1431,7 +1664,7 @@
                         <h3>🥃 配料清單</h3>
                         <div class="ingredients-list" id="ingredientsList">
                             <div class="ingredient-item">
-                                <input type="text" placeholder="例如：白蘭地 60ml" />
+                                <input type="text" list="ingredientNameOptions" placeholder="例如：白蘭地 60ml" />
                                 <button type="button" class="remove-btn"
                                     onclick="app.removeIngredient(this)">移除</button>
                             </div>
@@ -1469,40 +1702,150 @@
             </div>
         </div>
 
-        <!-- 設定區 -->
-        <div class="page active" id="settingsPage">
-            <div class="form-section">
-                <h3>🌐 GAS 連線</h3>
-                <div class="form-group">
-                    <label for="gasUrl">Web App URL（例：https://script.google.com/macros/s/XXX/exec）</label>
-                    <input type="url" id="gasUrl" placeholder="貼上你的 GAS Web App URL"
-                        selection="https://script.google.com/macros/s/AKfycbwksg0oiOee_zOw4y-Tu_p7X8yDeUOB4jf4Q3iI-xZcCBNWnxEKVmNmsFfp-g8vKCik/exec">
-                    <!-- selection="https://script.google.com/macros/s/AKfycbzo1BsYOsAHXIOs6ReOUhJr979390WkW49J11Mz1rlEPfp2D8Drbf3sNbkQICrmRxdI/exec"> -->
+        <!-- 配料庫（Ingredients）管理區 -->
+        <div class="page" id="ingredientsPage">
+            <div class="toolbar-row">
+                <div class="stats" id="ingredientsStats" style="margin-bottom:0;">配料庫載入中...</div>
+                <button class="btn btn-primary ingredient-write-only" type="button" onclick="ingredientsApp.showAddForm()">➕ 新增配料</button>
+            </div>
+
+            <div class="form-section" id="ingredientFormSection" style="display:none;">
+                <h3 id="ingredientFormTitle">➕ 新增配料</h3>
+                <input type="hidden" id="ingredientId" value="" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ingredientName">名稱 *</label>
+                        <input type="text" id="ingredientName" placeholder="例如：琴酒" />
                     </div>
+                    <div class="form-group">
+                        <label for="ingredientCategory">分類</label>
+                        <input type="text" id="ingredientCategory" placeholder="例如：基酒、利口酒、糖漿、裝飾" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ingredientUnit">常用單位</label>
+                        <input type="text" id="ingredientUnit" placeholder="例如：ml、顆、片" />
+                    </div>
+                    <div class="form-group">
+                        <label for="ingredientAmount">常用份量</label>
+                        <input type="text" id="ingredientAmount" placeholder="例如：45ml" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ingredientNotes">備註</label>
+                    <input type="text" id="ingredientNotes" placeholder="風味描述、替代品建議等" />
+                </div>
                 <div class="form-actions">
-                    <button class="btn btn-primary" id="btnSaveGasUrl">儲存連線設定</button>
-                    <button class="btn btn-secondary" id="btnTestGas">測試連線</button>
-                </div>
-
-                <!-- 調試資訊 -->
-                <div id="debugInfo" class="debug-panel hidden">
-                    <h4>連線調試資訊</h4>
-                    <div id="debugContent">尚未進行連線測試</div>
+                    <button type="button" class="btn btn-secondary" onclick="ingredientsApp.cancelForm()">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="ingredientsApp.save()">💾 儲存配料</button>
                 </div>
             </div>
 
-            <div class="form-section">
-                <h3>📊 儲存統計</h3>
-                <div id="storageStats" style="color: white; line-height: 1.6;">載入中...</div>
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>名稱</th>
+                            <th>分類</th>
+                            <th>常用單位</th>
+                            <th>常用份量</th>
+                            <th>備註</th>
+                            <th class="ingredient-write-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ingredientsTableBody">
+                        <tr><td colspan="6">載入中...</td></tr>
+                    </tbody>
+                </table>
             </div>
 
-            <div class="form-section">
-                <h3>ℹ️ 應用程式資訊</h3>
-                <div style="color: rgba(255,255,255,0.8); line-height: 1.6;">
-                    <p><strong>版本：</strong> 2.3（強化 GAS 連線：自動重試、逾時保護、防呆解析）</p>
-                    <p><strong>儲存方式：</strong> 雲端（GAS）＋ 本機 IndexedDB 圖片快取</p>
-                    <p><strong>支援功能：</strong> 離線瀏覽、雲端同步、圖片快取、管理員認證</p>
+            <!-- 供酒譜表單引用的名稱建議清單 -->
+            <datalist id="ingredientNameOptions"></datalist>
+        </div>
+
+        <!-- 杯型（Glasses）管理區 -->
+        <div class="page" id="glassesPage">
+            <div class="toolbar-row">
+                <div class="stats" id="glassesStats" style="margin-bottom:0;">杯型載入中...</div>
+                <button class="btn btn-primary glass-write-only" type="button" onclick="glassesApp.showAddForm()">➕ 新增杯型</button>
+            </div>
+
+            <div class="form-section" id="glassFormSection" style="display:none;">
+                <h3 id="glassFormTitle">➕ 新增杯型</h3>
+                <input type="hidden" id="glassId" value="" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="glassName">名稱 *</label>
+                        <input type="text" id="glassName" placeholder="例如：馬丁尼杯" />
+                    </div>
+                    <div class="form-group">
+                        <label for="glassCapacity">容量 capacitance(ml)</label>
+                        <input type="number" id="glassCapacity" min="0" placeholder="例如：150" />
+                    </div>
                 </div>
+                <div class="form-group">
+                    <label for="glassImageFile">杯型圖片（選填，建議 &lt; 40KB）</label>
+                    <input type="file" id="glassImageFile" accept="image/*" />
+                    <div id="glassImagePreview" style="margin-top:12px;"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="glassesApp.cancelForm()">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="glassesApp.save()">💾 儲存杯型</button>
+                </div>
+            </div>
+
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>圖片</th>
+                            <th>名稱</th>
+                            <th>容量 (ml)</th>
+                            <th class="glass-write-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="glassesTableBody">
+                        <tr><td colspan="4">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 稽核紀錄（AuditLogs）檢視區：admin / super_admin 可見 -->
+        <div class="page" id="auditPage">
+            <div class="toolbar-row">
+                <div class="stats" id="auditStats" style="margin-bottom:0;">稽核紀錄載入中...</div>
+                <button class="btn btn-primary" type="button" onclick="auditApp.load()">🔄 重新整理</button>
+            </div>
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>使用者</th>
+                            <th>角色</th>
+                            <th>動作</th>
+                            <th>對象</th>
+                            <th>詳情</th>
+                            <th>結果</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr><td colspan="7">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 系統設定（SystemConfig）：super_admin 可見 -->
+        <div class="page" id="configPage">
+            <div class="toolbar-row">
+                <div class="stats" id="configStats" style="margin-bottom:0;">系統設定載入中...</div>
+                <button class="btn btn-primary" type="button" onclick="configApp.load()">🔄 重新整理</button>
+            </div>
+            <div class="data-table-wrap" style="padding: 8px 20px;">
+                <div id="configList">載入中...</div>
             </div>
         </div>
     </div>
@@ -1536,14 +1879,7 @@
                         <label for="editGlassType">杯型</label>
                         <select id="editGlassType">
                             <option value="">選擇杯型</option>
-                            <option value="馬丁尼杯">馬丁尼杯</option>
-                            <option value="威士忌杯">威士忌杯</option>
-                            <option value="高球杯">高球杯</option>
-                            <option value="岩石杯">岩石杯</option>
-                            <option value="香檳杯">香檳杯</option>
-                            <option value="颶風杯">颶風杯</option>
-                            <option value="雞尾酒杯">雞尾酒杯</option>
-                            <option value="柯林杯">柯林杯</option>
+                            <!-- 杯型選項由 Glasses 資料表動態載入 -->
                         </select>
                     </div>
                 </div>
@@ -1612,45 +1948,50 @@
 
     <script>
         // ===== 正規化工具（避免舊資料型別造成 .split 錯誤） =====
-        const COLS = ['id', 'title', 'category', 'tags', 'instructions', 'glass_type', 'alcohol_content', 'difficulty', 'servings', 'image_b64'];
+        // 與 Code.gs 的 COCKTAIL_COLS 完全對齊（含 ingredients 單一字串欄位）
+        const COLS = ['id', 'title', 'category', 'tags', 'ingredients', 'instructions', 'glass_type', 'alcohol_content', 'difficulty', 'servings', 'image_b64'];
+
+        // 前端權限回退表：僅在後端登入回應未帶 permissions 時使用（需與 Code.gs 的 ROLE_PERMISSIONS 保持一致）。
+        // 正常情況下前端會直接採用後端回傳的 user.permissions，此表只是相容用的後備。
+        const ROLE_PERMISSIONS_FALLBACK = {
+            super_admin: ['view_data', 'write_cocktail', 'write_ingredient', 'write_glass', 'view_audit', 'manage_config'],
+            admin: ['view_data', 'write_cocktail', 'write_ingredient', 'write_glass', 'view_audit'],
+            editor: ['view_data', 'write_cocktail'],
+            user: ['view_data']
+        };
         function normalizeText(v) { if (Array.isArray(v)) return v.join('+'); if (v == null) return ''; return String(v); }
         function normalizeRecord(c = {}) { const out = {}; for (const k of COLS) out[k] = normalizeText(c[k]); return out; }
 
         // ===== IndexedDB：圖片與資料快取 =====
         class MobileStorageManager {
-            constructor() { this.dbName = 'CocktailDB'; this.dbVersion = 3; this.db = null; this.imageStore = 'images'; this.cocktailStore = 'cocktails'; this.ingredientsStore = 'ingredients'; }
-            async init() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onerror = () => reject(req.error); req.onsuccess = () => { this.db = req.result; resolve(this.db); }; req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.cocktailStore)) { const s = db.createObjectStore(this.cocktailStore, { keyPath: 'id' }); s.createIndex('title', 'title', { unique: false }); s.createIndex('category', 'category', { unique: false }); s.createIndex('tags', 'tags', { unique: false }); } if (!db.objectStoreNames.contains(this.imageStore)) { db.createObjectStore(this.imageStore, { keyPath: 'id' }); } if (!db.objectStoreNames.contains(this.ingredientsStore)) { const s = db.createObjectStore(this.ingredientsStore, { keyPath: 'item_id', autoIncrement: true }); s.createIndex('id', 'id', { unique: false }); } }; }); }
+            constructor() { this.dbName = 'CocktailDB'; this.dbVersion = 3; this.db = null; this.imageStore = 'images'; this.cocktailStore = 'cocktails'; }
+            async init() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onerror = () => reject(req.error); req.onsuccess = () => { this.db = req.result; resolve(this.db); }; req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.cocktailStore)) { const s = db.createObjectStore(this.cocktailStore, { keyPath: 'id' }); s.createIndex('title', 'title', { unique: false }); s.createIndex('category', 'category', { unique: false }); s.createIndex('tags', 'tags', { unique: false }); } if (!db.objectStoreNames.contains(this.imageStore)) { db.createObjectStore(this.imageStore, { keyPath: 'id' }); } }; }); }
             async saveCocktail(c) { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readwrite'); const st = tx.objectStore('cocktails'); const r = st.put(c); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
             async getAllCocktails() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readonly'); const st = tx.objectStore('cocktails'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
             async deleteCocktail(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails'], 'readwrite'); const st = tx.objectStore('cocktails'); const r = st.delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
-            async clearAllData() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails', 'images', 'ingredients'], 'readwrite'); const a = tx.objectStore('cocktails').clear(); const b = tx.objectStore('images').clear(); const c = tx.objectStore('ingredients').clear(); let ok = 0; a.onsuccess = () => { ok++; if (ok === 3) res(); }; b.onsuccess = () => { ok++; if (ok === 3) res(); }; c.onsuccess = () => { ok++; if (ok === 3) res(); }; a.onerror = b.onerror = c.onerror = (e) => rej(e.target.error); }); }
+            async clearAllData() { return new Promise((res, rej) => { const tx = this.db.transaction(['cocktails', 'images'], 'readwrite'); const a = tx.objectStore('cocktails').clear(); const b = tx.objectStore('images').clear(); let ok = 0; a.onsuccess = () => { ok++; if (ok === 2) res(); }; b.onsuccess = () => { ok++; if (ok === 2) res(); }; a.onerror = b.onerror = (e) => rej(e.target.error); }); }
             async saveImage(file, id) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { const imageData = { id, data: reader.result, type: file.type, name: file.name, size: file.size, timestamp: Date.now() }; const tx = this.db.transaction(['images'], 'readwrite'); const st = tx.objectStore('images'); const r = st.put(imageData); r.onsuccess = () => resolve({ id, dataUrl: reader.result }); r.onerror = () => reject(r.error); }; reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
             async getImage(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.get(id); r.onsuccess = () => res(r.result ? r.result.data : null); r.onerror = () => rej(r.error); }); }
-            async saveIngredients(cocktailId, ingredientsList) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readwrite'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('id'); const delReq = idx.openCursor(IDBKeyRange.only(cocktailId)); delReq.onsuccess = (ev) => { const cursor = ev.target.result; if (cursor) { st.delete(cursor.primaryKey); cursor.continue(); } }; delReq.onerror = () => rej(delReq.error); tx.oncomplete = () => { const addTx = this.db.transaction([this.ingredientsStore], 'readwrite'); const addSt = addTx.objectStore(this.ingredientsStore); ingredientsList.forEach((ing, index) => { const rec = { ...ing, id: cocktailId }; if (!rec.item_id) rec.item_id = `${cocktailId}-${index + 1}`; addSt.put(rec); /* 保留雲端唯一 item_id；沒有才組唯一鍵。用 put 避免跨酒主鍵撞鍵 */ }); addTx.oncomplete = () => res(); addTx.onerror = () => rej(addTx.error); }; }); }
-            async getIngredients(cocktailId) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readonly'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('id'); const range = IDBKeyRange.only(cocktailId); const r = idx.getAll(range); r.onsuccess = () => res((r.result || []).sort((a, b) => String(a.item_id).localeCompare(String(b.item_id), undefined, { numeric: true }))); r.onerror = () => rej(r.error); }); }
-            async deleteIngredientsByCocktailId(cocktailId) { return new Promise((res, rej) => { const tx = this.db.transaction([this.ingredientsStore], 'readwrite'); const st = tx.objectStore(this.ingredientsStore); const idx = st.index('id'); const r = idx.openCursor(IDBKeyRange.only(cocktailId)); r.onsuccess = (ev) => { const cursor = ev.target.result; if (cursor) { st.delete(cursor.primaryKey); cursor.continue(); } else res(); }; r.onerror = () => rej(r.error); }); }
             async getStorageStats() { const cocktails = await this.getAllCocktails(); const imgs = await new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); const totalImageSize = imgs.reduce((s, i) => s + (i.size || 0), 0); return { cocktailCount: cocktails.length, imageCount: imgs.length, totalImageSize, formattedImageSize: this.formatBytes(totalImageSize) }; }
             formatBytes(bytes, decimals = 2) { if (bytes === 0) return '0 Bytes'; const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]; }
         }
 
-        // ===== GAS 客戶端（增強版，支援管理員認證） =====
+        // ===== GAS 客戶端（增強版，支援管理員認證 + token 自動換發） =====
         const gas = {
-            // ===== 連線設定（可調整）=====
             config: {
-                timeoutGet: 20000,    // 讀取類逾時（ms）
-                timeoutPost: 35000,   // 寫入類逾時（ms）
-                maxRetries: 2,        // 額外重試次數（總嘗試 = 1 + maxRetries）
-                retryBaseDelay: 700   // 退避基礎延遲（ms）
+                timeoutGet: 20000,
+                timeoutPost: 35000,
+                maxRetries: 2,
+                retryBaseDelay: 700
             },
 
-            _listInflight: null,      // list() 併發去重用
+            _listInflight: null,
+            _refreshInflight: null, // access token 換發併發去重
 
-            get url() { return localStorage.getItem('gasUrl') || ''; },
-            set url(v) {
-                localStorage.setItem('gasUrl', this._clean(v));
-            },
+            // API 網址：優先使用前端專案注入的 __API_URL__；否則退回 localStorage（手動指定用）
+            get url() { return window.__API_URL__ || localStorage.getItem('gasUrl') || ''; },
+            set url(v) { localStorage.setItem('gasUrl', this._clean(v)); },
 
-            // 清除常見的「看不見」雜質：零寬字元、BOM、方向標記、NBSP、一般空白、結尾斜線
             _clean(v) {
                 let s = (v || '')
                     .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00A0]/g, '')
@@ -1658,12 +1999,11 @@
                     .trim()
                     .replace(/\/+$/, '');
                 if (!s) return '';
-                if (/^http:\/\//i.test(s)) s = s.replace(/^http:\/\//i, 'https://'); // 強制 https
-                if (!/^https?:\/\//i.test(s)) s = 'https://' + s;                   // 缺協定自動補上
+                if (/^http:\/\//i.test(s)) s = s.replace(/^http:\/\//i, 'https://');
+                if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
                 return s;
             },
 
-            // 寬鬆但正確的驗證：用原生 URL 解析，支援個人版與 Workspace（/a/macros/網域/）兩種網址
             _isValidUrl(url) {
                 try {
                     const u = new URL(url);
@@ -1677,16 +2017,6 @@
             logDebug(message, data = null) {
                 const timestamp = new Date().toLocaleTimeString();
                 console.log(`[${timestamp}] [GAS] ${message}`, data || '');
-
-                const debugContent = document.getElementById('debugContent');
-                if (debugContent) {
-                    const logEntry = `[${timestamp}] ${message}${data ? ': ' + JSON.stringify(data, null, 2).substring(0, 200) : ''}`;
-                    debugContent.innerHTML = logEntry + '<br>' + debugContent.innerHTML;
-                    const lines = debugContent.innerHTML.split('<br>');
-                    if (lines.length > 10) {
-                        debugContent.innerHTML = lines.slice(0, 10).join('<br>');
-                    }
-                }
             },
 
             showConnectionStatus(message, type = 'info') {
@@ -1695,13 +2025,8 @@
                     status.textContent = message;
                     status.className = `connection-status ${type}`;
                     status.classList.remove('hidden');
-
                     if (type !== 'error') {
-                        setTimeout(() => {
-                            if (status.classList.contains(type)) {
-                                status.classList.add('hidden');
-                            }
-                        }, 5000);
+                        setTimeout(() => { if (status.classList.contains(type)) status.classList.add('hidden'); }, 5000);
                     }
                 }
                 this.logDebug(`狀態更新 [${type}]`, message);
@@ -1709,31 +2034,24 @@
 
             _sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
 
-            // 正規化並驗證 URL，回傳可用的 URL 或丟出友善錯誤
             _resolveUrl() {
                 const url = this._clean(this.url);
                 if (!url) throw new Error('尚未設定 GAS Web App URL，請到「設定」貼上 /exec 連結');
-                if (!this._isValidUrl(url)) {
-                    throw new Error('網址無法辨識。請貼上「部署為網頁應用程式」後、以 /exec 結尾的連結（個人版或 Workspace 皆可）');
-                }
+                if (!this._isValidUrl(url)) throw new Error('網址無法辨識。請貼上「部署為網頁應用程式」後、以 /exec 結尾的連結（個人版或 Workspace 皆可）');
                 return url;
             },
 
-            // 保留舊介面（async）以維持相容
             async validateUrl(url) {
                 const target = this._clean(url);
                 if (!target) return { valid: false, error: '未設定 URL' };
-                return this._isValidUrl(target)
-                    ? { valid: true, url: target }
-                    : { valid: false, error: '網址無法辨識，請貼上以 /exec 結尾的 Web App 連結（個人版或 Workspace 皆可）' };
+                return this._isValidUrl(target) ? { valid: true, url: target } : { valid: false, error: '網址無法辨識，請貼上以 /exec 結尾的 Web App 連結（個人版或 Workspace 皆可）' };
             },
 
-            // 判斷是否為「值得重試」的瞬時錯誤
             _isRetriable(err, httpStatus) {
                 if (httpStatus && [429, 500, 502, 503, 504].includes(httpStatus)) return true;
                 if (!err) return false;
-                if (err.name === 'AbortError') return true;             // 逾時（含冷啟動）
-                if (err.name === 'TypeError') return true;              // 多為網路錯誤 / Failed to fetch
+                if (err.name === 'AbortError') return true;
+                if (err.name === 'TypeError') return true;
                 if (/Failed to fetch|NetworkError|network/i.test(err.message || '')) return true;
                 return false;
             },
@@ -1746,11 +2064,6 @@
                 return msg;
             },
 
-            /**
-             * 統一請求核心：含逾時、指數退避自動重試、HTML/JSON 防呆解析
-             * opts: { method, query, body, timeout, retries, label }
-             * 回傳：解析後的 JSON 物件（含 ok 欄位）；失敗丟出友善錯誤
-             */
             async _request(opts = {}) {
                 const baseUrl = this._resolveUrl();
                 const isPost = opts.method === 'POST';
@@ -1758,7 +2071,6 @@
                 const maxRetries = (opts.retries != null) ? opts.retries : this.config.maxRetries;
                 const label = opts.label || (isPost ? '寫入' : '讀取');
 
-                // 組 URL（GET 帶 query；一律加上時間戳避免快取）
                 let target = baseUrl;
                 const qs = new URLSearchParams(opts.query || {});
                 qs.set('_t', Date.now().toString());
@@ -1770,7 +2082,6 @@
                     if (attempt > 0) {
                         const delay = Math.round(this.config.retryBaseDelay * Math.pow(2, attempt - 1) + Math.random() * 300);
                         this.showConnectionStatus(`⏳ ${label}重試中（第 ${attempt}/${maxRetries} 次）…`, 'warning');
-                        this.logDebug(`重試 ${label}`, { attempt, delay });
                         await this._sleep(delay);
                     }
 
@@ -1778,15 +2089,8 @@
                     const timer = setTimeout(() => controller.abort(), timeout);
 
                     try {
-                        const fetchOpts = {
-                            method: opts.method || 'GET',
-                            mode: 'cors',
-                            cache: 'no-store',
-                            redirect: 'follow',
-                            signal: controller.signal
-                        };
+                        const fetchOpts = { method: opts.method || 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal };
                         if (isPost) {
-                            // text/plain 為 CORS 安全請求，可避免 GAS 觸發 preflight（降低失敗率）
                             fetchOpts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
                             fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body || {});
                         }
@@ -1794,22 +2098,15 @@
                         const response = await fetch(target, fetchOpts);
                         clearTimeout(timer);
 
-                        this.logDebug(`${label}回應`, `${response.status} ${response.statusText}`);
-
                         if (!response.ok) {
                             const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
-                            if (this._isRetriable(null, response.status) && attempt < maxRetries) {
-                                lastErr = err; continue;
-                            }
+                            if (this._isRetriable(null, response.status) && attempt < maxRetries) { lastErr = err; continue; }
                             throw err;
                         }
 
                         const text = (await response.text() || '').trim();
                         if (!text) throw new Error('伺服器回應為空（可能部署未生效，請重新部署）');
-                        if (text[0] === '<') {
-                            // 收到 HTML：通常是權限/部署問題
-                            throw new Error('伺服器回應為網頁而非資料，請確認 Web App「執行身分＝我」「誰可以存取＝任何人」，並使用最新部署的 /exec 連結');
-                        }
+                        if (text[0] === '<') throw new Error('伺服器回應為網頁而非資料，請確認 Web App「執行身分＝我」「誰可以存取＝任何人」，並使用最新部署的 /exec 連結');
 
                         let json;
                         try { json = JSON.parse(text); }
@@ -1821,140 +2118,203 @@
                         clearTimeout(timer);
                         lastErr = err;
                         const retriable = this._isRetriable(err);
-                        this.logDebug(`${label}異常`, { name: err.name, message: err.message, attempt, retriable });
-                        if (retriable && attempt < maxRetries) continue;  // 還能重試
-                        break; // 不可重試或已用盡次數
+                        if (retriable && attempt < maxRetries) continue;
+                        break;
                     }
                 }
 
                 throw new Error(this._friendlyError(lastErr));
             },
 
-            // ===== 對外 API =====
+            // 帶自動 401（token 過期）重試一次的包裝：先嘗試 refresh_token，再重打原請求
+            async _authedRequest(opts) {
+                let json = await this._request(opts);
+                const looksUnauthorized = json && json.ok === false && /未授權|token 已過期|token 簽章不符|token 格式錯誤/.test(json.error || '');
+                if (looksUnauthorized && adminAuth.refreshToken) {
+                    const refreshed = await adminAuth.tryRefreshAccessToken();
+                    if (refreshed && opts.body && typeof opts.body === 'object') {
+                        opts.body = { ...opts.body, token: adminAuth.adminToken };
+                        json = await this._request(opts);
+                    }
+                }
+                return json;
+            },
+
+            // 需登入的 GET 讀取：自動帶上 access token，遇到未授權時嘗試以 refresh token 換新後重試一次。
+            async _authedGet(action, label) {
+                const doReq = () => this._request({ method: 'GET', query: { action, token: adminAuth.adminToken || '' }, label });
+                let json = await doReq();
+                const looksUnauthorized = json && json.ok === false && /未授權|token 已過期|token 簽章不符|token 格式錯誤|view_data/.test(json.error || '');
+                if (looksUnauthorized && adminAuth.refreshToken) {
+                    const refreshed = await adminAuth.tryRefreshAccessToken();
+                    if (refreshed) json = await doReq();
+                }
+                return json;
+            },
+
             async test() {
                 try {
                     this.showConnectionStatus('正在測試連線…', 'info');
                     const json = await this._request({ method: 'GET', query: { action: 'test' }, label: '連線測試', timeout: 15000 });
-                    if (json.ok === true) {
-                        this.showConnectionStatus('✅ 連線測試成功', 'success');
-                        return true;
-                    }
+                    if (json.ok === true) { this.showConnectionStatus('✅ 連線測試成功', 'success'); return true; }
                     this.showConnectionStatus('⌫ 測試失敗：' + (json.error || '伺服器回報未成功'), 'error');
                     return false;
-                } catch (error) {
-                    this.showConnectionStatus('⌫ ' + error.message, 'error');
-                    return false;
-                }
+                } catch (error) { this.showConnectionStatus('⌫ ' + error.message, 'error'); return false; }
             },
 
             async list() {
-                // 併發去重：若已有進行中的 list，直接共用同一個 Promise
                 if (this._listInflight) return this._listInflight;
-
                 this._listInflight = (async () => {
                     this.showConnectionStatus('正在從雲端讀取資料…', 'info');
-                    const json = await this._request({ method: 'GET', query: { action: 'list' }, label: '讀取清單' });
+                    const json = await this._authedGet('list', '讀取清單');
                     if (!json.ok) throw new Error(json.error || 'list 操作失敗');
                     const data = json.data || [];
                     this.showConnectionStatus(`✅ 已讀取 ${data.length} 筆資料`, 'success');
                     return data;
                 })();
-
-                try {
-                    return await this._listInflight;
-                } catch (error) {
-                    this.showConnectionStatus('⌫ ' + error.message, 'error');
-                    throw error;
-                } finally {
-                    this._listInflight = null;
-                }
-            },
-
-            async listIngredients() {
-                try {
-                    const json = await this._request({ method: 'GET', query: { action: 'list_ingredients' }, label: '讀取配料清單' });
-                    if (!json.ok) throw new Error(json.error || 'listIngredients 操作失敗');
-                    const data = json.data || [];
-                    return data;
-                } catch (error) {
-                    console.warn('⌫ 配料清單讀取失敗：', error.message);
-                    return [];
-                }
+                try { return await this._listInflight; }
+                catch (error) { this.showConnectionStatus('⌫ ' + error.message, 'error'); throw error; }
+                finally { this._listInflight = null; }
             },
 
             async upsert(data, token) {
                 this.showConnectionStatus('正在儲存到雲端…', 'info');
                 try {
-                    const body = { action: 'upsert', data };
-                    if (token) body.accessToken = token;  // 帶上 token 進行授權
-                    const json = await this._request({ method: 'POST', body, label: '儲存' });
+                    const body = { action: 'upsert', data }; if (token) body.token = token;
+                    const json = await this._authedRequest({ method: 'POST', body, label: '儲存' });
                     if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
                     this.showConnectionStatus('✅ 儲存成功', 'success');
                     return json.id;
-                } catch (error) {
-                    this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error');
-                    throw error;
-                }
+                } catch (error) { this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error'); throw error; }
             },
 
             async remove(id, token) {
                 this.showConnectionStatus('正在刪除…', 'info');
                 try {
-                    const body = { action: 'delete', id };
-                    if (token) body.accessToken = token;  // 帶上 token 進行授權
-                    const json = await this._request({ method: 'POST', body, label: '刪除' });
+                    const body = { action: 'delete', id }; if (token) body.token = token;
+                    const json = await this._authedRequest({ method: 'POST', body, label: '刪除' });
                     if (!json.ok) throw new Error(json.error || 'delete 操作失敗');
                     this.showConnectionStatus('✅ 刪除成功', 'success');
                     return true;
-                } catch (error) {
-                    this.showConnectionStatus('⌫ 刪除失敗：' + error.message, 'error');
-                    throw error;
-                }
+                } catch (error) { this.showConnectionStatus('⌫ 刪除失敗：' + error.message, 'error'); throw error; }
             },
 
             async adminLogin(username, password) {
-                // 登入不重試，避免帳密鎖定；但保留逾時保護
                 const json = await this._request({
                     method: 'POST',
-                    body: { action: 'admin_login', username, password },
-                    label: '管理員登入',
-                    retries: 0
+                    body: { action: 'admin_login', username, password, userAgent: navigator.userAgent },
+                    label: '管理員登入', retries: 0
                 });
                 if (!json.ok) throw new Error(json.error || '登入請求失敗');
                 return json.data;
+            },
+
+            async userLogin(username, password) {
+                const json = await this._request({ method: 'POST', body: { action: 'login', username, password, userAgent: navigator.userAgent }, label: '登入', retries: 0 });
+                if (!json.ok) throw new Error(json.error || '登入請求失敗');
+                return json.data;
+            },
+
+            async signup(username, password) {
+                const json = await this._request({ method: 'POST', body: { action: 'signup', username, password, userAgent: navigator.userAgent }, label: '註冊', retries: 0 });
+                if (!json.ok) throw new Error(json.error || '註冊請求失敗');
+                return json.data;
+            },
+
+            async refreshAccessToken(refreshToken) {
+                if (this._refreshInflight) return this._refreshInflight;
+                this._refreshInflight = (async () => {
+                    const json = await this._request({ method: 'POST', body: { action: 'refresh_token', refreshToken }, label: '換發 token', retries: 0 });
+                    if (!json.ok) throw new Error(json.error || 'refresh_token 失敗');
+                    return json.data;
+                })();
+                try { return await this._refreshInflight; } finally { this._refreshInflight = null; }
+            },
+
+            async logout(refreshToken, accessToken) {
+                try {
+                    await this._request({ method: 'POST', body: { action: 'admin_logout', refreshToken, token: accessToken }, label: '登出', retries: 0 });
+                } catch (e) { console.warn('伺服器登出請求失敗（將僅清除本機狀態）：', e); }
+            },
+
+            // ===== 配料庫（Ingredients）=====
+            async listIngredients() {
+                const json = await this._authedGet('list_ingredients', '讀取配料庫');
+                if (!json.ok) throw new Error(json.error || 'list_ingredients 失敗');
+                return json.data || [];
+            },
+            async upsertIngredient(data, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'upsert_ingredient', data, token }, label: '儲存配料' });
+                if (!json.ok) throw new Error(json.error || 'upsert_ingredient 失敗');
+                return json.id;
+            },
+            async deleteIngredient(id, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'delete_ingredient', id, token }, label: '刪除配料' });
+                if (!json.ok) throw new Error(json.error || 'delete_ingredient 失敗');
+                return true;
+            },
+
+            // ===== 杯型（Glasses）=====
+            async listGlasses() {
+                const json = await this._authedGet('list_glasses', '讀取杯型');
+                if (!json.ok) throw new Error(json.error || 'list_glasses 失敗');
+                return json.data || [];
+            },
+            async upsertGlass(data, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'upsert_glass', data, token }, label: '儲存杯型' });
+                if (!json.ok) throw new Error(json.error || 'upsert_glass 失敗');
+                return json.id;
+            },
+            async deleteGlass(id, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'delete_glass', id, token }, label: '刪除杯型' });
+                if (!json.ok) throw new Error(json.error || 'delete_glass 失敗');
+                return true;
+            },
+
+            // ===== 稽核紀錄 =====
+            async getAuditLogs(token, limit = 50) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'get_audit_logs', token, limit }, label: '讀取稽核紀錄' });
+                if (!json.ok) throw new Error(json.error || 'get_audit_logs 失敗');
+                return json.data || [];
+            },
+
+            // ===== 系統設定 =====
+            async getConfig(token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'get_config', token }, label: '讀取系統設定' });
+                if (!json.ok) throw new Error(json.error || 'get_config 失敗');
+                return json.data || {};
+            },
+            async setConfig(key, value, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'set_config', key, value, token }, label: '更新系統設定' });
+                if (!json.ok) throw new Error(json.error || 'set_config 失敗');
+                return true;
             }
         };
 
-        // ===== 管理員認證系統 =====
+        // ===== 管理員認證系統（access token + refresh token）=====
         const adminAuth = {
             isAdmin: false,
             adminUser: null,
-            adminToken: null,
+            adminToken: null,     // access token
+            refreshToken: null,   // refresh token（長效、可撤銷）
+            _refreshTimer: null,
 
             init() {
                 this.loadAdminStatus();
                 this.bindEvents();
                 this.updateUI();
+                this._scheduleProactiveRefresh();
             },
 
             bindEvents() {
                 document.getElementById('adminLoginBtn').addEventListener('click', () => this.showLoginModal());
                 document.getElementById('adminLogoutBtn').addEventListener('click', () => this.logout());
                 document.getElementById('adminLoginForm').addEventListener('submit', (e) => this.handleLogin(e));
-
-                // ESC 鍵關閉彈窗
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && document.getElementById('adminLoginModal').classList.contains('show')) {
-                        this.hideLoginModal();
-                    }
-                });
-
-                // 點擊外部關閉彈窗
-                document.getElementById('adminLoginModal').addEventListener('click', (e) => {
-                    if (e.target === e.currentTarget) {
-                        this.hideLoginModal();
-                    }
-                });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('adminLoginModal').classList.contains('show')) this.hideLoginModal(); });
+                document.getElementById('adminLoginModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) this.hideLoginModal(); });
+                // 全站登入閘門
+                const gateForm = document.getElementById('authGateForm');
+                if (gateForm) gateForm.addEventListener('submit', (e) => this.handleLogin(e));
             },
 
             loadAdminStatus() {
@@ -1962,13 +2322,10 @@
                     const savedAuth = localStorage.getItem('adminAuth');
                     if (savedAuth) {
                         const authData = JSON.parse(savedAuth);
-                        if (this.isTokenValid(authData.token, authData.timestamp)) {
-                            this.isAdmin = true;
-                            this.adminUser = authData.user;
-                            this.adminToken = authData.token;
-                        } else {
-                            localStorage.removeItem('adminAuth');
-                        }
+                        this.isAdmin = true;
+                        this.adminUser = authData.user;
+                        this.adminToken = authData.accessToken;
+                        this.refreshToken = authData.refreshToken;
                     }
                 } catch (e) {
                     console.warn('載入管理員狀態失敗:', e);
@@ -1978,21 +2335,37 @@
 
             saveAdminStatus() {
                 if (this.isAdmin && this.adminUser && this.adminToken) {
-                    const authData = {
-                        user: this.adminUser,
-                        token: this.adminToken,
-                        timestamp: Date.now()
-                    };
-                    localStorage.setItem('adminAuth', JSON.stringify(authData));
+                    localStorage.setItem('adminAuth', JSON.stringify({
+                        user: this.adminUser, accessToken: this.adminToken, refreshToken: this.refreshToken, timestamp: Date.now()
+                    }));
                 } else {
                     localStorage.removeItem('adminAuth');
                 }
             },
 
-            isTokenValid(token, timestamp) {
-                if (!token || !timestamp) return false;
-                const now = Date.now();
-                return (now - timestamp) < (24 * 60 * 60 * 1000);
+            // 每 45 分鐘嘗試主動換發一次 access token（伺服器預設 60 分鐘過期）
+            _scheduleProactiveRefresh() {
+                if (this._refreshTimer) clearInterval(this._refreshTimer);
+                this._refreshTimer = setInterval(() => {
+                    if (this.isAdmin && this.refreshToken) this.tryRefreshAccessToken();
+                }, 45 * 60 * 1000);
+            },
+
+            async tryRefreshAccessToken() {
+                if (!this.refreshToken) return false;
+                try {
+                    const data = await gas.refreshAccessToken(this.refreshToken);
+                    this.adminToken = data.accessToken;
+                    this.saveAdminStatus();
+                    return true;
+                } catch (e) {
+                    console.warn('換發 access token 失敗，需重新登入：', e.message);
+                    this.isAdmin = false; this.adminUser = null; this.adminToken = null; this.refreshToken = null;
+                    this.saveAdminStatus();
+                    this.updateUI();
+                    gas.showConnectionStatus('⚠️ 登入狀態已過期，請重新登入', 'warning');
+                    return false;
+                }
             },
 
             showLoginModal() {
@@ -2009,55 +2382,66 @@
 
             async handleLogin(e) {
                 e.preventDefault();
-
-                const username = document.getElementById('adminUsername').value.trim();
-                const password = document.getElementById('adminPassword').value;
-
-                if (!username || !password) {
-                    this.showError('請輸入用戶名和密碼');
-                    return;
-                }
+                // 支援兩個來源：登入閘門（authGate）或頂部的登入彈窗（adminLoginModal）
+                const uEl = document.getElementById('authGateUsername') || document.getElementById('adminUsername');
+                const pEl = document.getElementById('authGatePassword') || document.getElementById('adminPassword');
+                const username = (uEl && uEl.value.trim()) || '';
+                const password = (pEl && pEl.value) || '';
+                if (!username || !password) { this.showError('請輸入用戶名和密碼'); return; }
 
                 try {
                     this.showMessage('正在驗證...', 'info');
-
-                    const response = await gas.adminLogin(username, password);
-
-                    if (response.success && response.admin) {
-                        this.isAdmin = true;
+                    // 使用一般登入 API（login）：任何啟用中的帳號都能登入（含 user 角色），
+                    // 能做什麼由該帳號的角色權限決定。
+                    const response = await gas.userLogin(username, password);
+                    if (response.success) {
+                        this.isAdmin = true;                 // 這裡的 isAdmin 代表「已登入」
                         this.adminUser = response.user;
-                        this.adminToken = response.token;
-
+                        this.adminToken = response.accessToken || response.token;
+                        this.refreshToken = response.refreshToken;
                         this.saveAdminStatus();
                         this.updateUI();
-
-                        this.showSuccess('登入成功！管理員模式已啟用');
-
-                        setTimeout(() => {
-                            this.hideLoginModal();
-                        }, 1500);
-
+                        this.showSuccess('登入成功！');
+                        this.clearGateInputs();
+                        setTimeout(() => { this.hideLoginModal(); }, 800);
+                        // 登入後才載入資料（未登入完全拿不到）
+                        if (window.app) window.app.onLoggedIn();
                     } else {
                         this.showError(response.error || '登入失敗');
                     }
-
                 } catch (error) {
-                    console.error('管理員登入錯誤:', error);
+                    console.error('登入錯誤:', error);
                     this.showError('登入失敗: ' + error.message);
                 }
             },
 
-            logout() {
-                if (confirm('確定要登出管理員模式嗎？')) {
-                    this.isAdmin = false;
-                    this.adminUser = null;
-                    this.adminToken = null;
+            clearGateInputs() {
+                ['authGateUsername', 'authGatePassword', 'adminUsername', 'adminPassword'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+            },
 
-                    localStorage.removeItem('adminAuth');
-                    this.updateUI();
+            async logout() {
+                if (!confirm('確定要登出嗎？')) return;
+                await gas.logout(this.refreshToken, this.adminToken);
+                this.isAdmin = false; this.adminUser = null; this.adminToken = null; this.refreshToken = null;
+                localStorage.removeItem('adminAuth');
+                this.updateUI();
+                if (window.app) window.app.onLoggedOut();
+                gas.showConnectionStatus('✅ 已登出', 'success');
+            },
 
-                    gas.showConnectionStatus('✅ 已登出管理員模式', 'success');
-                }
+            currentRole() { return (this.adminUser && this.adminUser.role) ? String(this.adminUser.role).toLowerCase() : ''; },
+
+            // 目前登入者的權限清單（由後端登入回應提供）。
+            // 若後端未回傳（相容舊資料），前端以本地對照表回退推導。
+            currentPermissions() {
+                if (this.adminUser && Array.isArray(this.adminUser.permissions)) return this.adminUser.permissions;
+                return ROLE_PERMISSIONS_FALLBACK[this.currentRole()] || [];
+            },
+
+            hasPermission(permission) {
+                return this.isAdmin && this.currentPermissions().indexOf(permission) >= 0;
             },
 
             updateUI() {
@@ -2068,82 +2452,379 @@
 
                 if (this.isAdmin) {
                     statusEl.className = 'admin-controls admin-mode';
-                    statusTextEl.textContent = `管理員: ${this.adminUser?.username || 'Admin'}`;
+                    statusTextEl.textContent = `${this.adminUser?.username || '使用者'}（${this.currentRole()}）`;
                     loginBtn.style.display = 'none';
                     logoutBtn.style.display = 'block';
                     document.body.classList.add('admin-mode');
                     document.body.classList.remove('guest-mode');
+                    document.body.classList.remove('logged-out'); // 顯示 App、隱藏登入閘門
                 } else {
                     statusEl.className = 'admin-controls guest-mode';
-                    statusTextEl.textContent = '訪客模式';
+                    statusTextEl.textContent = '未登入';
                     loginBtn.style.display = 'block';
                     logoutBtn.style.display = 'none';
                     document.body.classList.add('guest-mode');
                     document.body.classList.remove('admin-mode');
+                    document.body.classList.add('logged-out');    // 隱藏 App、顯示登入閘門
                 }
 
+                // 依權限切換 body class，供 CSS 精細控制各種寫入元件的顯示
+                document.body.classList.toggle('can-write-cocktail', this.hasPermission('write_cocktail'));
+                document.body.classList.toggle('can-write-ingredient', this.hasPermission('write_ingredient'));
+                document.body.classList.toggle('can-write-glass', this.hasPermission('write_glass'));
+
                 this.updateEditButtons();
+                this.updateRoleGatedNav();
             },
 
-            updateEditButtons() {
-                const editButtons = document.querySelectorAll('[onclick*="editCocktail"]');
-                const browseButton = document.querySelector('[data-page="browse"]');
-                const addButton = document.querySelector('[data-page="add"]');
-                const deleteButtons = document.querySelectorAll('#deleteCocktail');
-
-                const elements = [...editButtons, browseButton, addButton, ...deleteButtons].filter(Boolean);
-
-                elements.forEach(button => {
-                    if (this.isAdmin) {
-                        button.classList.remove('edit-disabled');
-                        button.removeAttribute('disabled');
-                        button.title = '';
-                    } else {
-                        button.classList.add('edit-disabled');
-                        button.setAttribute('disabled', 'disabled');
-                        button.title = '需要管理員權限，請先登入';
-                    }
+            // 根據權限顯示/隱藏 data-perm 指定的導覽分頁（add=write_cocktail, audit=view_audit, config=manage_config）
+            updateRoleGatedNav() {
+                document.querySelectorAll('.nav-btn[data-perm]').forEach(btn => {
+                    const perm = btn.dataset.perm;
+                    btn.classList.toggle('role-hidden', !this.hasPermission(perm));
                 });
             },
 
-            checkPermission(operation = '編輯') {
-                if (!this.isAdmin) {
-                    alert(`⚠️ ${operation}功能需要管理員權限\n\n請先登入管理員帳號`);
-                    this.showLoginModal();
+            updateEditButtons() {
+                // 卡片編輯鈕、刪除鈕的顯示由 CSS（can-write-cocktail）控制；
+                // 這裡只針對「新增酒譜」分頁鈕依 write_cocktail 權限啟用/停用。
+                const addButton = document.querySelector('[data-page="add"]');
+                if (addButton) {
+                    if (this.hasPermission('write_cocktail')) { addButton.classList.remove('edit-disabled'); addButton.removeAttribute('disabled'); addButton.title = ''; }
+                    else { addButton.classList.add('edit-disabled'); addButton.setAttribute('disabled', 'disabled'); addButton.title = '需要 write_cocktail 權限'; }
+                }
+            },
+
+            // operation：顯示用的動作名稱；requiredPerm：需要的權限鍵（可省略，省略時只檢查是否登入）
+            checkPermission(operation = '編輯', requiredPerm = null) {
+                if (!this.isAdmin) { alert(`⚠️ ${operation}功能需要登入\n\n請先登入帳號`); this.showLoginModal(); return false; }
+                if (requiredPerm && !this.hasPermission(requiredPerm)) {
+                    alert(`⚠️ ${operation}功能需要「${requiredPerm}」權限\n\n你目前的角色（${this.currentRole() || '未知'}）沒有此權限`);
                     return false;
                 }
                 return true;
             },
 
-            showError(message) {
-                this.showMessage(message, 'error');
-            },
-
-            showSuccess(message) {
-                this.showMessage(message, 'success');
-            },
-
+            showError(message) { this.showMessage(message, 'error'); },
+            showSuccess(message) { this.showMessage(message, 'success'); },
             showMessage(message, type) {
                 this.clearMessages();
+                // 依目前是否在「登入閘門」決定訊息顯示位置
+                const usingGate = document.body.classList.contains('logged-out');
+                const errorEl = document.getElementById(usingGate ? 'authGateError' : 'adminLoginError');
+                const successEl = document.getElementById(usingGate ? 'authGateSuccess' : 'adminLoginSuccess');
+                if (!errorEl || !successEl) return;
+                if (type === 'error') { errorEl.textContent = message; errorEl.style.display = 'block'; }
+                else { successEl.textContent = message; successEl.style.display = 'block'; }
+            },
+            clearMessages() {
+                ['adminLoginError', 'adminLoginSuccess', 'authGateError', 'authGateSuccess'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.style.display = 'none';
+                });
+            }
+        };
 
-                const errorEl = document.getElementById('adminLoginError');
-                const successEl = document.getElementById('adminLoginSuccess');
-
-                if (type === 'error') {
-                    errorEl.textContent = message;
-                    errorEl.style.display = 'block';
-                } else if (type === 'success') {
-                    successEl.textContent = message;
-                    successEl.style.display = 'block';
-                } else {
-                    successEl.textContent = message;
-                    successEl.style.display = 'block';
+        // ===== 配料庫（Ingredients）管理模組 =====
+        const ingredientsApp = {
+            items: [],
+            async load() {
+                try {
+                    this.items = await gas.listIngredients();
+                    this.render();
+                    this.renderDatalist();
+                } catch (e) {
+                    document.getElementById('ingredientsTableBody').innerHTML = `<tr><td colspan="6">讀取失敗：${e.message}</td></tr>`;
                 }
             },
+            render() {
+                const stats = document.getElementById('ingredientsStats');
+                stats.textContent = `共 ${this.items.length} 項配料`;
+                const body = document.getElementById('ingredientsTableBody');
+                if (!this.items.length) { body.innerHTML = `<tr><td colspan="6">尚無配料資料</td></tr>`; return; }
+                body.innerHTML = this.items.map(it => `
+                    <tr>
+                        <td>${it.name || ''}</td>
+                        <td>${it.category || ''}</td>
+                        <td>${it.default_unit || ''}</td>
+                        <td>${it.common_amount || ''}</td>
+                        <td>${it.notes || ''}</td>
+                        <td class="ingredient-write-only">
+                            <button class="btn btn-secondary" style="padding:6px 10px;font-size:.8rem;" onclick="ingredientsApp.edit('${it.id}')">編輯</button>
+                            <button class="btn btn-danger" style="padding:6px 10px;font-size:.8rem;" onclick="ingredientsApp.remove('${it.id}')">刪除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+            renderDatalist() {
+                const dl = document.getElementById('ingredientNameOptions');
+                if (!dl) return;
+                dl.innerHTML = this.items.map(it => `<option value="${(it.name || '').replace(/"/g, '&quot;')}"></option>`).join('');
+            },
+            showAddForm() {
+                if (!adminAuth.checkPermission('新增配料', 'write_ingredient')) return;
+                document.getElementById('ingredientFormTitle').textContent = '➕ 新增配料';
+                document.getElementById('ingredientId').value = '';
+                document.getElementById('ingredientName').value = '';
+                document.getElementById('ingredientCategory').value = '';
+                document.getElementById('ingredientUnit').value = '';
+                document.getElementById('ingredientAmount').value = '';
+                document.getElementById('ingredientNotes').value = '';
+                document.getElementById('ingredientFormSection').style.display = 'block';
+            },
+            edit(id) {
+                if (!adminAuth.checkPermission('編輯配料', 'write_ingredient')) return;
+                const it = this.items.find(x => x.id === id);
+                if (!it) return;
+                document.getElementById('ingredientFormTitle').textContent = '✏️ 編輯配料';
+                document.getElementById('ingredientId').value = it.id;
+                document.getElementById('ingredientName').value = it.name || '';
+                document.getElementById('ingredientCategory').value = it.category || '';
+                document.getElementById('ingredientUnit').value = it.default_unit || '';
+                document.getElementById('ingredientAmount').value = it.common_amount || '';
+                document.getElementById('ingredientNotes').value = it.notes || '';
+                document.getElementById('ingredientFormSection').style.display = 'block';
+                document.getElementById('ingredientFormSection').scrollIntoView({ behavior: 'smooth' });
+            },
+            cancelForm() { document.getElementById('ingredientFormSection').style.display = 'none'; },
+            async save() {
+                if (!adminAuth.checkPermission('儲存配料', 'write_ingredient')) return;
+                const name = document.getElementById('ingredientName').value.trim();
+                if (!name) { alert('請輸入配料名稱'); return; }
+                const data = {
+                    id: document.getElementById('ingredientId').value.trim(),
+                    name,
+                    category: document.getElementById('ingredientCategory').value.trim(),
+                    default_unit: document.getElementById('ingredientUnit').value.trim(),
+                    common_amount: document.getElementById('ingredientAmount').value.trim(),
+                    notes: document.getElementById('ingredientNotes').value.trim()
+                };
+                try {
+                    await gas.upsertIngredient(data, adminAuth.adminToken);
+                    this.cancelForm();
+                    await this.load();
+                    gas.showConnectionStatus('✅ 配料已儲存', 'success');
+                } catch (e) {
+                    alert('儲存失敗：' + e.message);
+                }
+            },
+            async remove(id) {
+                if (!adminAuth.checkPermission('刪除配料', 'write_ingredient')) return;
+                if (!confirm('確定要刪除這項配料嗎？')) return;
+                try {
+                    await gas.deleteIngredient(id, adminAuth.adminToken);
+                    await this.load();
+                    gas.showConnectionStatus('✅ 配料已刪除', 'success');
+                } catch (e) {
+                    alert('刪除失敗：' + e.message);
+                }
+            }
+        };
 
-            clearMessages() {
-                document.getElementById('adminLoginError').style.display = 'none';
-                document.getElementById('adminLoginSuccess').style.display = 'none';
+        // ===== 杯型（Glasses）管理模組 =====
+        const glassesApp = {
+            items: [],
+            _pendingImageB64: null,   // 新選擇但尚未儲存的圖片（dataURL）
+            _keepExistingImage: '',   // 編輯時沿用的既有圖片
+
+            async load() {
+                try {
+                    this.items = await gas.listGlasses();
+                    this.render();
+                    // 杯型清單同時用來填充酒譜表單的杯型下拉選單
+                    if (window.app) window.app.populateGlassSelects(this.items);
+                } catch (e) {
+                    document.getElementById('glassesTableBody').innerHTML = `<tr><td colspan="4">讀取失敗：${e.message}</td></tr>`;
+                }
+            },
+            render() {
+                const stats = document.getElementById('glassesStats');
+                stats.textContent = `共 ${this.items.length} 種杯型`;
+                const body = document.getElementById('glassesTableBody');
+                if (!this.items.length) { body.innerHTML = `<tr><td colspan="4">尚無杯型資料</td></tr>`; return; }
+                body.innerHTML = this.items.map(g => {
+                    const cap = g['capacitance(ml)'] || '';
+                    const img = g.image_b64
+                        ? `<img src="${g.image_b64}" alt="${g.name || ''}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">`
+                        : '🥃';
+                    return `
+                    <tr>
+                        <td>${img}</td>
+                        <td>${g.name || ''}</td>
+                        <td>${cap ? cap + ' ml' : ''}</td>
+                        <td class="glass-write-only">
+                            <button class="btn btn-secondary" style="padding:6px 10px;font-size:.8rem;" onclick="glassesApp.edit('${g.id}')">編輯</button>
+                            <button class="btn btn-danger" style="padding:6px 10px;font-size:.8rem;" onclick="glassesApp.remove('${g.id}')">刪除</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            },
+            _resetForm() {
+                document.getElementById('glassId').value = '';
+                document.getElementById('glassName').value = '';
+                document.getElementById('glassCapacity').value = '';
+                document.getElementById('glassImageFile').value = '';
+                document.getElementById('glassImagePreview').innerHTML = '';
+                this._pendingImageB64 = null;
+                this._keepExistingImage = '';
+            },
+            showAddForm() {
+                if (!adminAuth.checkPermission('新增杯型', 'write_glass')) return;
+                this._resetForm();
+                document.getElementById('glassFormTitle').textContent = '➕ 新增杯型';
+                document.getElementById('glassFormSection').style.display = 'block';
+            },
+            edit(id) {
+                if (!adminAuth.checkPermission('編輯杯型', 'write_glass')) return;
+                const g = this.items.find(x => x.id === id);
+                if (!g) return;
+                this._resetForm();
+                document.getElementById('glassFormTitle').textContent = '✏️ 編輯杯型';
+                document.getElementById('glassId').value = g.id;
+                document.getElementById('glassName').value = g.name || '';
+                document.getElementById('glassCapacity').value = g['capacitance(ml)'] || '';
+                this._keepExistingImage = g.image_b64 || '';
+                const preview = document.getElementById('glassImagePreview');
+                if (g.image_b64) {
+                    preview.innerHTML = `<img src="${g.image_b64}" style="max-width:120px;border-radius:8px;"><div style="font-size:.8rem;color:var(--card-muted);margin-top:4px;">目前的圖片</div>`;
+                }
+                document.getElementById('glassFormSection').style.display = 'block';
+                document.getElementById('glassFormSection').scrollIntoView({ behavior: 'smooth' });
+            },
+            cancelForm() {
+                document.getElementById('glassFormSection').style.display = 'none';
+                this._resetForm();
+            },
+            // 綁定圖片選擇 → 轉為 dataURL 預覽並暫存
+            bindImageInput() {
+                const input = document.getElementById('glassImageFile');
+                if (!input) return;
+                input.addEventListener('change', (e) => {
+                    const preview = document.getElementById('glassImagePreview');
+                    preview.innerHTML = '';
+                    this._pendingImageB64 = null;
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 45000) {
+                        gas.showConnectionStatus('⚠️ 圖片較大（' + Math.round(file.size / 1024) + 'KB），Google Sheet 單格上限約 50KB，可能無法儲存，建議壓縮', 'warning');
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        this._pendingImageB64 = reader.result;
+                        const img = document.createElement('img');
+                        img.src = reader.result;
+                        Object.assign(img.style, { maxWidth: '120px', borderRadius: '8px' });
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            },
+            async save() {
+                if (!adminAuth.checkPermission('儲存杯型', 'write_glass')) return;
+                const name = document.getElementById('glassName').value.trim();
+                if (!name) { alert('請輸入杯型名稱'); return; }
+                const data = {
+                    id: document.getElementById('glassId').value.trim(),
+                    name,
+                    'capacitance(ml)': document.getElementById('glassCapacity').value.trim(),
+                    image_b64: this._pendingImageB64 != null ? this._pendingImageB64 : this._keepExistingImage
+                };
+                try {
+                    await gas.upsertGlass(data, adminAuth.adminToken);
+                    this.cancelForm();
+                    await this.load();
+                    gas.showConnectionStatus('✅ 杯型已儲存', 'success');
+                } catch (e) {
+                    alert('儲存失敗：' + e.message);
+                }
+            },
+            async remove(id) {
+                if (!adminAuth.checkPermission('刪除杯型', 'write_glass')) return;
+                if (!confirm('確定要刪除這種杯型嗎？')) return;
+                try {
+                    await gas.deleteGlass(id, adminAuth.adminToken);
+                    await this.load();
+                    gas.showConnectionStatus('✅ 杯型已刪除', 'success');
+                } catch (e) {
+                    alert('刪除失敗：' + e.message);
+                }
+            }
+        };
+
+        // ===== 稽核紀錄（AuditLogs）檢視模組 =====
+        const auditApp = {
+            async load() {
+                const body = document.getElementById('auditTableBody');
+                if (!adminAuth.hasPermission('view_audit')) {
+                    body.innerHTML = `<tr><td colspan="7">需要 view_audit 權限才能檢視稽核紀錄</td></tr>`;
+                    document.getElementById('auditStats').textContent = '未授權';
+                    return;
+                }
+                try {
+                    const logs = await gas.getAuditLogs(adminAuth.adminToken, 100);
+                    document.getElementById('auditStats').textContent = `最近 ${logs.length} 筆紀錄`;
+                    if (!logs.length) { body.innerHTML = `<tr><td colspan="7">尚無紀錄</td></tr>`; return; }
+                    body.innerHTML = logs.map(l => `
+                        <tr>
+                            <td>${(l.timestamp || '').replace('T', ' ').slice(0, 19)}</td>
+                            <td>${l.username || ''}</td>
+                            <td>${l.role ? `<span class="pill role">${l.role}</span>` : ''}</td>
+                            <td>${l.action || ''}</td>
+                            <td>${l.target_id || ''}</td>
+                            <td>${l.detail || ''}</td>
+                            <td>${String(l.success) === 'false' ? '<span class="pill fail">失敗</span>' : '<span class="pill success">成功</span>'}</td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    body.innerHTML = `<tr><td colspan="7">讀取失敗：${e.message}</td></tr>`;
+                }
+            }
+        };
+
+        // ===== 系統設定（SystemConfig）檢視/編輯模組 =====
+        const configApp = {
+            data: {},
+            async load() {
+                const wrap = document.getElementById('configList');
+                if (!adminAuth.hasPermission('manage_config')) {
+                    wrap.innerHTML = `<p style="padding:16px 0;color:var(--card-muted);">需要 manage_config 權限才能檢視系統設定</p>`;
+                    document.getElementById('configStats').textContent = '未授權';
+                    return;
+                }
+                try {
+                    this.data = await gas.getConfig(adminAuth.adminToken);
+                    document.getElementById('configStats').textContent = `共 ${Object.keys(this.data).length} 項設定`;
+                    this.render();
+                } catch (e) {
+                    wrap.innerHTML = `<p style="padding:16px 0;">讀取失敗：${e.message}</p>`;
+                }
+            },
+            render() {
+                const wrap = document.getElementById('configList');
+                const keys = Object.keys(this.data);
+                if (!keys.length) { wrap.innerHTML = '<p>尚無設定資料</p>'; return; }
+                wrap.innerHTML = keys.map(k => {
+                    const item = this.data[k];
+                    return `
+                    <div class="config-row">
+                        <div>
+                            <span class="config-key">${k}</span>
+                            ${item.description ? `<span class="config-desc">${item.description}</span>` : ''}
+                        </div>
+                        <input type="text" id="cfg_${k}" value="${(item.value || '').replace(/"/g, '&quot;')}" />
+                        <button class="btn btn-primary" style="padding:8px 14px;font-size:.85rem;" onclick="configApp.save('${k}')">儲存</button>
+                    </div>`;
+                }).join('');
+            },
+            async save(key) {
+                const input = document.getElementById('cfg_' + key);
+                if (!input) return;
+                try {
+                    await gas.setConfig(key, input.value, adminAuth.adminToken);
+                    gas.showConnectionStatus(`✅ 已更新設定：${key}`, 'success');
+                    await this.load();
+                } catch (e) {
+                    alert('更新失敗：' + e.message);
+                }
             }
         };
 
@@ -2152,7 +2833,14 @@
             constructor() {
                 this.storage = new MobileStorageManager();
                 this.cocktails = []; this.filteredCocktails = []; this.currentView = 'grid';
-                this.editTargetId = null; this.pages = { browse: document.getElementById('browsePage'), add: document.getElementById('addPage'), settings: document.getElementById('settingsPage') };
+                this.editTargetId = null; this.pages = {
+                    browse: document.getElementById('browsePage'),
+                    add: document.getElementById('addPage'),
+                    ingredients: document.getElementById('ingredientsPage'),
+                    glasses: document.getElementById('glassesPage'),
+                    audit: document.getElementById('auditPage'),
+                    config: document.getElementById('configPage')
+                };
                 this.navButtons = Array.from(document.querySelectorAll('.nav-btn'));
                 this.successMessage = null;
                 this.init();
@@ -2160,23 +2848,49 @@
 
             norm(v) { return (v == null ? '' : String(v)).trim().toLowerCase(); }
 
+            parseIngredients(ingredientsStr) {
+                return String(ingredientsStr || '').split('+').map(s => s.trim()).filter(Boolean);
+            }
+
             async init() {
                 try {
                     await this.storage.init();
                     this.bindUI();
-                    await this.pullFromCloud({ silent: true });
-                    if (this.cocktails.length === 0) { this.render(); }
                     this.setupPWA();
-                    await this.updateStorageStats();
-                    const savedUrl = gas.url; if (savedUrl) document.getElementById('gasUrl').value = savedUrl;
 
-                    // 初始化管理員認證系統
+                    // 先初始化認證：會依 localStorage 還原登入狀態並更新 UI（含登入閘門顯示與否）
                     adminAuth.init();
+                    glassesApp.bindImageInput();
+
+                    if (adminAuth.isAdmin) {
+                        // 已登入 → 驗證 token 是否仍有效，順便載入資料
+                        await this.onLoggedIn();
+                    } else {
+                        // 未登入 → 顯示登入閘門，不載入任何資料
+                        this.onLoggedOut();
+                    }
                 } catch (err) {
                     console.error('初始化失敗:', err);
                     gas.showConnectionStatus('⌫ 初始化失敗: ' + err.message, 'error');
-                    this.showError('初始化失敗，請檢查 GAS 設定或重新整理。');
+                    this.showError('初始化失敗，請重新整理再試。');
                 }
+            }
+
+            // 登入後：載入雲端資料 + 配料庫 + 杯型
+            async onLoggedIn() {
+                try { await gas.test(); } catch (e) { /* 狀態已於 gas.test() 內顯示 */ }
+                await this.pullFromCloud({ silent: true });
+                if (this.cocktails.length === 0) { this.render(); }
+                ingredientsApp.load();
+                glassesApp.load();
+            }
+
+            // 登出後：清空畫面資料，回到登入閘門
+            onLoggedOut() {
+                this.cocktails = [];
+                this.filteredCocktails = [];
+                try { this.updateCategories(); } catch (e) { }
+                try { this.render(); } catch (e) { }
             }
 
             bindUI() {
@@ -2191,44 +2905,35 @@
                 document.getElementById('btnSync').addEventListener('click', () => this.pullFromCloud());
                 document.getElementById('btnClearData').addEventListener('click', () => this.confirmClearData());
 
-                document.getElementById('btnSaveGasUrl').addEventListener('click', async () => {
-                    const input = document.getElementById('gasUrl');
-                    const check = await gas.validateUrl(input.value);
-                    if (!check.valid) {
-                        gas.showConnectionStatus('⌫ ' + check.error, 'error');
-                        return;
-                    }
-                    gas.url = input.value;            // setter 會自動正規化
-                    input.value = gas.url;            // 回填正規化後的結果
-                    gas.showConnectionStatus('✅ 連線設定已儲存，正在驗證…', 'success');
-                    document.getElementById('debugInfo').classList.remove('hidden');
-                    try { await gas.test(); } catch (e) { /* 狀態已於 test 內顯示 */ }
-                });
-
-                document.getElementById('btnTestGas').addEventListener('click', async () => {
-                    document.getElementById('debugInfo').classList.remove('hidden');
-                    try {
-                        const ok = await gas.test();
-                    } catch (e) {
-                    }
-                });
-
                 this.navButtons.forEach((btn) => {
                     btn.addEventListener('click', () => {
                         const pageKey = btn.dataset.page;
 
-                        // 檢查權限：訪客模式下不允許訪問瀏覽和新增頁面
-                        if (!adminAuth.isAdmin && (pageKey === 'browse' || pageKey === 'add')) {
+                        // 全站需登入：任何分頁都需先登入
+                        if (!adminAuth.isAdmin) {
                             adminAuth.showLoginModal();
                             return;
+                        }
+                        // 權限限定頁面：進一步檢查
+                        if (pageKey === 'add' && !adminAuth.hasPermission('write_cocktail')) {
+                            alert('⚠️ 新增酒譜需要 write_cocktail 權限'); return;
+                        }
+                        if (pageKey === 'audit' && !adminAuth.hasPermission('view_audit')) {
+                            alert('⚠️ 稽核紀錄需要 view_audit 權限'); return;
+                        }
+                        if (pageKey === 'config' && !adminAuth.hasPermission('manage_config')) {
+                            alert('⚠️ 系統設定需要 manage_config 權限'); return;
                         }
 
                         this.navButtons.forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
-                        Object.values(this.pages).forEach(p => p.classList.remove('active'));
+                        Object.values(this.pages).forEach(p => p && p.classList.remove('active'));
                         if (this.pages[pageKey]) this.pages[pageKey].classList.add('active');
                         if (pageKey === 'add' && this.successMessage) this.successMessage.style.display = 'none';
-                        if (pageKey === 'settings') this.updateStorageStats();
+                        if (pageKey === 'ingredients') ingredientsApp.load();
+                        if (pageKey === 'glasses') glassesApp.load();
+                        if (pageKey === 'audit') auditApp.load();
+                        if (pageKey === 'config') configApp.load();
                     });
                 });
 
@@ -2252,7 +2957,6 @@
                     });
                 }
 
-                // 編輯抽屜事件綁定 - 增強版
                 this.bindEditDrawerEvents();
 
                 const addImageInput = document.getElementById('cocktailImageFile');
@@ -2262,51 +2966,13 @@
                 document.getElementById('imageFile').addEventListener('change', (e) => { const preview = document.getElementById('imagePreview'); preview.innerHTML = ''; const file = e.target.files[0]; if (file) { const url = URL.createObjectURL(file); const img = document.createElement('img'); img.src = url; Object.assign(img.style, { maxWidth: '100%', borderRadius: '8px' }); preview.appendChild(img); const caption = document.createElement('div'); caption.textContent = '新上傳的圖片預覽'; Object.assign(caption.style, { fontSize: '.9rem', color: '#666', marginTop: '8px' }); preview.appendChild(caption); } });
             }
 
-            // 編輯抽屜事件綁定 - 增強版
             bindEditDrawerEvents() {
-                // X 按鈕關閉
                 document.getElementById('closeDrawerX').addEventListener('click', () => this.closeEditDrawer());
-
-                // 取消按鈕
-                document.getElementById('cancelEdit').addEventListener('click', () => {
-                    if (confirm('確定要取消編輯嗎？未儲存的變更將會遺失。')) {
-                        this.closeEditDrawer();
-                    }
-                });
-
-                // 儲存按鈕
-                document.getElementById('saveCocktail').addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    await this.saveEdited();
-                });
-
-                // 刪除按鈕
-                document.getElementById('deleteCocktail').addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    if (confirm('確定要刪除這個酒譜嗎？此操作無法復原！')) {
-                        await this.deleteCocktail();
-                    }
-                });
-
-                // ESC 鍵關閉
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        const drawer = document.getElementById('editDrawer');
-                        if (!drawer.classList.contains('hidden')) {
-                            this.closeEditDrawer();
-                        }
-                    }
-                });
-
-                // 點擊外部關閉
-                document.addEventListener('click', (e) => {
-                    const drawer = document.getElementById('editDrawer');
-                    if (!drawer.classList.contains('hidden') && !drawer.contains(e.target)) {
-                        if (!e.target.matches('[onclick*="editCocktail"]')) {
-                            this.closeEditDrawer();
-                        }
-                    }
-                });
+                document.getElementById('cancelEdit').addEventListener('click', () => { if (confirm('確定要取消編輯嗎？未儲存的變更將會遺失。')) this.closeEditDrawer(); });
+                document.getElementById('saveCocktail').addEventListener('click', async (e) => { e.preventDefault(); await this.saveEdited(); });
+                document.getElementById('deleteCocktail').addEventListener('click', async (e) => { e.preventDefault(); if (confirm('確定要刪除這個酒譜嗎？此操作無法復原！')) await this.deleteCocktail(); });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const drawer = document.getElementById('editDrawer'); if (!drawer.classList.contains('hidden')) this.closeEditDrawer(); } });
+                document.addEventListener('click', (e) => { const drawer = document.getElementById('editDrawer'); if (!drawer.classList.contains('hidden') && !drawer.contains(e.target)) { if (!e.target.matches('[onclick*="editCocktail"]')) this.closeEditDrawer(); } });
             }
 
             closeEditDrawer() {
@@ -2332,66 +2998,15 @@
                     const data = await gas.list();
                     const norm = data.map(normalizeRecord);
                     for (const c of norm) await this.storage.saveCocktail(c);
-                    
-                    // 同步 Ingredients 表（從後端）
-                    const ingredientsData = await gas.listIngredients();
-                    if (ingredientsData.length > 0) {
-                        // 按 id 分組，然後保存
-                        const groupedByid = {};
-                        ingredientsData.forEach(ing => {
-                            if (!groupedByid[ing.id]) {
-                                groupedByid[ing.id] = [];
-                            }
-                            groupedByid[ing.id].push(ing);
-                        });
-                        
-                        // 為每個 cocktail 保存配料
-                        for (const [cocktailId, ingredientsList] of Object.entries(groupedByid)) {
-                            await this.storage.saveIngredients(cocktailId, ingredientsList);
-                        }
-                    }
-                    
-                    this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
-                        ...c,
-                        favorite: c.favorite === true
-                    }));
-                    
-                    // 為每個 cocktail 讀取配料
-                    for (const c of this.cocktails) {
-                        try {
-                            c.ingredientsList = await this.storage.getIngredients(c.id);
-                        } catch (e) {
-                            console.warn(`讀取配料 ${c.id} 失敗:`, e);
-                            c.ingredientsList = [];
-                        }
-                    }
-                    
+                    this.cocktails = (await this.storage.getAllCocktails()).map(c => ({ ...c, favorite: c.favorite === true }));
                     this.filteredCocktails = [...this.cocktails];
                     this.updateCategories();
                     this.render();
-                    if (!silent) {
-                        gas.showConnectionStatus(`✅ 已成功同步 ${this.cocktails.length} 筆資料`, 'success');
-                    }
+                    if (!silent) gas.showConnectionStatus(`✅ 已成功同步 ${this.cocktails.length} 筆資料`, 'success');
                 } catch (err) {
                     console.warn('雲端讀取失敗，改用本機快取：', err);
-                    if (!silent) {
-                        gas.showConnectionStatus('⚠️ 雲端連線失敗，顯示本機快取資料', 'warning');
-                    }
-                    this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
-                        ...c,
-                        favorite: c.favorite === true
-                    }));
-                    
-                    // 為每個 cocktail 讀取配料
-                    for (const c of this.cocktails) {
-                        try {
-                            c.ingredientsList = await this.storage.getIngredients(c.id);
-                        } catch (e) {
-                            console.warn(`讀取配料 ${c.id} 失敗:`, e);
-                            c.ingredientsList = [];
-                        }
-                    }
-                    
+                    if (!silent) gas.showConnectionStatus('⚠️ 雲端連線失敗，顯示本機快取資料', 'warning');
+                    this.cocktails = (await this.storage.getAllCocktails()).map(c => ({ ...c, favorite: c.favorite === true }));
                     this.filteredCocktails = [...this.cocktails];
                     this.updateCategories();
                     this.render();
@@ -2399,8 +3014,7 @@
             }
 
             async handleAdd() {
-                if (!adminAuth.checkPermission('新增')) return;
-
+                if (!adminAuth.checkPermission('新增', 'write_cocktail')) return;
                 try {
                     const title = document.getElementById('cocktailTitle').value.trim() || '未命名酒譜';
                     const category = document.getElementById('cocktailCategory').value.trim();
@@ -2410,35 +3024,19 @@
                     const servings = document.getElementById('servings').value.trim();
                     const chips = Array.from(document.querySelectorAll('#tagsDisplay .tag')).map(x => x.dataset.tag);
                     const tags = chips.join(';');
-                    
-                    // 收集配料數據（ingredients, quantity, unit）
-                    const ingredientsList = Array.from(document.querySelectorAll('#ingredientsList .ingredient-item')).map(row => {
-                        const inputs = row.querySelectorAll('input');
-                        return {
-                            ingredients: inputs[0]?.value.trim() || '',
-                            quantity: inputs[1]?.value.trim() || '',
-                            unit: inputs[2]?.value.trim() || ''
-                        };
-                    }).filter(ing => ing.ingredients || ing.quantity || ing.unit);
-                    
+                    const ingredients = Array.from(document.querySelectorAll('#ingredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
                     const instructions = Array.from(document.querySelectorAll('#instructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
-                    
+
                     let image_b64 = '';
                     const imageFile = document.getElementById('cocktailImageFile').files[0];
                     const newId = this.makeId();
                     if (imageFile) { try { const saved = await this.storage.saveImage(imageFile, newId); image_b64 = saved.dataUrl; } catch (err) { console.warn('圖片快取失敗（不影響文字資料）：', err); } }
-                    
-                    const rec = { id: newId, title, category, tags, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
+
+                    const rec = { id: newId, title, category, tags, ingredients, instructions, glass_type: glassType, alcohol_content: alcoholContent || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
                     const recNorm = normalizeRecord(rec);
-                    // ✅ 送雲端時附上配料陣列：normalizeRecord 不含 ingredients，需在這裡補回，後端才會寫入 Ingredients 子表
-                    await gas.upsert({ ...recNorm, ingredients: ingredientsList }, adminAuth.adminToken);  // ← 傳遞 token
+                    await gas.upsert(recNorm, adminAuth.adminToken);
                     await this.storage.saveCocktail(recNorm);
-                    
-                    // 保存配料到 Ingredients 表格（本機快取）
-                    if (ingredientsList.length > 0) {
-                        await this.storage.saveIngredients(newId, ingredientsList);
-                    }
-                    
+
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.successMessage.style.display = 'block';
@@ -2453,7 +3051,6 @@
 
             makeId() { return 'C' + String(Date.now()); }
 
-            // 下拉選單填值：若資料值不在選項中，動態補上以免遺失
             setSelectValue(sel, value) {
                 if (!sel) return;
                 value = value || '';
@@ -2462,6 +3059,31 @@
                     opt.value = value; opt.textContent = value; sel.appendChild(opt);
                 }
                 sel.value = value;
+            }
+
+            // 依 Glasses 資料表內容重建「杯型」下拉選單（新增表單與編輯抽屜共用）。
+            // 保留第一個 placeholder 選項；並盡量維持使用者當前已選的值。
+            populateGlassSelects(glasses) {
+                const list = Array.isArray(glasses) ? glasses : [];
+                this._glassList = list; // 供 setGlassOptionsFor 及編輯時參考
+                ['glassType', 'editGlassType'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (!sel) return;
+                    const prev = sel.value;
+                    // 移除除了第一個 placeholder 以外的選項
+                    sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+                    list.forEach(g => {
+                        const name = g.name || '';
+                        if (!name) return;
+                        const opt = document.createElement('option');
+                        const cap = g['capacitance(ml)'] || '';
+                        opt.value = name;
+                        opt.textContent = cap ? `${name}（${cap}ml）` : name;
+                        sel.appendChild(opt);
+                    });
+                    // 還原先前選取值（若仍存在）
+                    if (prev && Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+                });
             }
 
             _addTagChip(display, tag) {
@@ -2475,62 +3097,31 @@
                 display.appendChild(chip);
             }
 
-            _makeIngredientRow(value = '', quantity = '', unit = '') {
+            _makeIngredientRow(value = '') {
                 const div = document.createElement('div');
                 div.className = 'ingredient-item';
-                div.style.display = 'flex';
-                div.style.gap = '8px';
-                div.style.marginBottom = '8px';
-                
-                const ingInput = document.createElement('input');
-                ingInput.type = 'text'; 
-                ingInput.placeholder = '材料名稱'; 
-                ingInput.value = value;
-                ingInput.style.flex = '2';
-                
-                const qtyInput = document.createElement('input');
-                qtyInput.type = 'text'; 
-                qtyInput.placeholder = '數量'; 
-                qtyInput.value = quantity;
-                qtyInput.style.flex = '1';
-                
-                const unitInput = document.createElement('input');
-                unitInput.type = 'text'; 
-                unitInput.placeholder = '單位'; 
-                unitInput.value = unit;
-                unitInput.style.flex = '1';
-                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.setAttribute('list', 'ingredientNameOptions');
+                input.placeholder = '例如：白蘭地 60ml';
+                input.value = value;
                 const btn = document.createElement('button');
-                btn.type = 'button'; 
-                btn.className = 'remove-btn'; 
-                btn.textContent = '移除';
+                btn.type = 'button'; btn.className = 'remove-btn'; btn.textContent = '移除';
                 btn.addEventListener('click', () => div.remove());
-                
-                div.appendChild(ingInput); 
-                div.appendChild(qtyInput); 
-                div.appendChild(unitInput); 
-                div.appendChild(btn);
+                div.appendChild(input); div.appendChild(btn);
                 return div;
             }
 
             renderEditIngredients(list) {
                 const wrap = document.getElementById('editIngredientsList');
                 wrap.innerHTML = '';
-                (list && list.length ? list : [{}]).forEach(ing => {
-                    const ingredients = typeof ing === 'string' ? ing : (ing.ingredients || '');
-                    const quantity = typeof ing === 'string' ? '' : (ing.quantity || '');
-                    const unit = typeof ing === 'string' ? '' : (ing.unit || '');
-                    wrap.appendChild(this._makeIngredientRow(ingredients, quantity, unit));
-                });
+                (list && list.length ? list : ['']).forEach(val => wrap.appendChild(this._makeIngredientRow(val)));
             }
 
-            addEditIngredient() {
-                document.getElementById('editIngredientsList').appendChild(this._makeIngredientRow('', '', ''));
-            }
+            addEditIngredient() { document.getElementById('editIngredientsList').appendChild(this._makeIngredientRow('')); }
 
             _renumberEditInstructions() {
-                Array.from(document.querySelectorAll('#editInstructionsList .instruction-item span'))
-                    .forEach((s, i) => s.textContent = (i + 1) + '.');
+                Array.from(document.querySelectorAll('#editInstructionsList .instruction-item span')).forEach((s, i) => s.textContent = (i + 1) + '.');
             }
 
             _makeInstructionRow(value = '', idx = 1) {
@@ -2561,8 +3152,7 @@
             }
 
             async editCocktail(id) {
-                if (!adminAuth.checkPermission('編輯')) return;
-
+                if (!adminAuth.checkPermission('編輯', 'write_cocktail')) return;
                 const c = this.cocktails.find(r => r.id === id); if (!c) return;
                 this.editTargetId = id;
 
@@ -2573,25 +3163,13 @@
                 this.setSelectValue(document.getElementById('editDifficulty'), c.difficulty || '');
                 document.getElementById('editServings').value = c.servings || '';
 
-                // 標籤晶片
                 const tagsDisplay = document.getElementById('editTagsDisplay');
                 tagsDisplay.innerHTML = '';
-                String(c.tags || '').split(';').map(t => t.trim()).filter(Boolean)
-                    .forEach(t => this._addTagChip(tagsDisplay, t));
+                String(c.tags || '').split(';').map(t => t.trim()).filter(Boolean).forEach(t => this._addTagChip(tagsDisplay, t));
 
-                // 配料（從 Ingredients 表格讀取）
-                try {
-                    const ingredientsList = await this.storage.getIngredients(id);
-                    this.renderEditIngredients(ingredientsList);
-                } catch (e) {
-                    console.warn('讀取配料失敗：', e);
-                    this.renderEditIngredients([]);
-                }
-
-                // 步驟
+                this.renderEditIngredients(this.parseIngredients(c.ingredients));
                 this.renderEditInstructions(String(c.instructions || '').split('>').map(s => s.trim()).filter(Boolean));
 
-                // 圖片預覽
                 const fileInput = document.getElementById('imageFile'); if (fileInput) fileInput.value = '';
                 const preview = document.getElementById('imagePreview'); preview.innerHTML = '';
                 try {
@@ -2615,7 +3193,6 @@
             async saveEdited() {
                 try {
                     const idx = this.cocktails.findIndex(r => r.id === this.editTargetId); if (idx === -1) return;
-
                     let image_b64 = this.cocktails[idx].image_b64 || '';
                     const imageFile = document.getElementById('imageFile').files[0];
                     if (imageFile) { try { const saved = await this.storage.saveImage(imageFile, this.editTargetId); image_b64 = saved.dataUrl; } catch (e) { console.warn('圖片更新快取失敗：', e); } }
@@ -2627,36 +3204,14 @@
                     const difficulty = document.getElementById('editDifficulty').value.trim();
                     const servings = document.getElementById('editServings').value.trim();
                     const tags = Array.from(document.querySelectorAll('#editTagsDisplay .tag')).map(x => x.dataset.tag).join(';');
-                    
-                    // 收集配料數據（ingredients, quantity, unit）
-                    const ingredientsList = Array.from(document.querySelectorAll('#editIngredientsList .ingredient-item')).map(row => {
-                        const inputs = row.querySelectorAll('input');
-                        return {
-                            ingredients: inputs[0]?.value.trim() || '',
-                            quantity: inputs[1]?.value.trim() || '',
-                            unit: inputs[2]?.value.trim() || ''
-                        };
-                    }).filter(ing => ing.ingredients || ing.quantity || ing.unit);
-                    
+                    const ingredients = Array.from(document.querySelectorAll('#editIngredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
                     const instructions = Array.from(document.querySelectorAll('#editInstructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
 
-                    const updated = {
-                        ...this.cocktails[idx],
-                        favorite: this.cocktails[idx].favorite === true,
-                        title, category, glass_type, alcohol_content, difficulty, tags, instructions, servings, image_b64
-                    };
+                    const updated = { ...this.cocktails[idx], favorite: this.cocktails[idx].favorite === true, title, category, glass_type, alcohol_content, difficulty, tags, ingredients, instructions, servings, image_b64 };
                     const updatedNorm = normalizeRecord(updated);
-                    // ✅ 同上：附上配料陣列。空陣列代表「清空」，後端會刪掉該酒所有成份
-                    await gas.upsert({ ...updatedNorm, ingredients: ingredientsList }, adminAuth.adminToken);  // ← 傳遞 token
+                    await gas.upsert(updatedNorm, adminAuth.adminToken);
                     await this.storage.saveCocktail(updatedNorm);
-                    
-                    // 保存配料到 Ingredients 表格（本機快取）
-                    if (ingredientsList.length > 0) {
-                        await this.storage.saveIngredients(this.editTargetId, ingredientsList);
-                    } else {
-                        await this.storage.deleteIngredientsByCocktailId(this.editTargetId);
-                    }
-                    
+
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.closeEditDrawer();
@@ -2671,9 +3226,8 @@
             async deleteCocktail() {
                 try {
                     const id = this.editTargetId;
-                    await gas.remove(id, adminAuth.adminToken);  // ← 傳遞 token
+                    await gas.remove(id, adminAuth.adminToken);
                     await this.storage.deleteCocktail(id);
-                    await this.storage.deleteIngredientsByCocktailId(id);
                     await this.pullFromCloud({ silent: true });
                     this.render();
                     this.closeEditDrawer();
@@ -2685,22 +3239,20 @@
                 }
             }
 
-            addIngredient() { 
-                document.getElementById('ingredientsList').appendChild(this._makeIngredientRow('', '', '')); 
-            }
+            addIngredient() { document.getElementById('ingredientsList').appendChild(this._makeIngredientRow('')); }
             removeIngredient(btn) { btn.closest('.ingredient-item')?.remove(); }
 
             addInstruction() { const wrap = document.getElementById('instructionsList'); const idx = wrap.querySelectorAll('.instruction-item').length + 1; const div = document.createElement('div'); div.className = 'instruction-item'; div.innerHTML = `<span style="font-weight:bold;min-width:30px;">${idx}.</span><input type="text" placeholder="詳細描述步驟" /><button type="button" class="remove-btn">移除</button>`; div.querySelector('.remove-btn').addEventListener('click', () => { div.remove(); Array.from(wrap.querySelectorAll('.instruction-item span')).forEach((s, i) => s.textContent = (i + 1) + '.'); }); wrap.appendChild(div); }
             removeInstruction(btn) { btn.closest('.instruction-item')?.remove(); }
 
-            clearForm() { 
-                document.getElementById('addCocktailForm').reset(); 
-                document.getElementById('tagsDisplay').innerHTML = ''; 
-                document.getElementById('addImagePreview').innerHTML = ''; 
+            clearForm() {
+                document.getElementById('addCocktailForm').reset();
+                document.getElementById('tagsDisplay').innerHTML = '';
+                document.getElementById('addImagePreview').innerHTML = '';
                 const ingredientsList = document.getElementById('ingredientsList');
                 ingredientsList.innerHTML = '';
-                ingredientsList.appendChild(this._makeIngredientRow('', '', ''));
-                document.getElementById('instructionsList').innerHTML = `<div class="instruction-item"><span style="font-weight: bold; min-width: 30px;">1.</span><input type="text" placeholder="詳細描述第一個步驟" /><button type="button" class="remove-btn" onclick="app.removeInstruction(this)">移除</button></div>`; 
+                ingredientsList.appendChild(this._makeIngredientRow(''));
+                document.getElementById('instructionsList').innerHTML = `<div class="instruction-item"><span style="font-weight: bold; min-width: 30px;">1.</span><input type="text" placeholder="詳細描述第一個步驟" /><button type="button" class="remove-btn" onclick="app.removeInstruction(this)">移除</button></div>`;
             }
 
             updateCategories() { const sel = document.getElementById('categorySelect'); if (!sel) return; const categories = [...new Set(this.cocktails.map(r => (r.category || '').trim()).filter(Boolean))].sort(); sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove()); categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt); }); }
@@ -2710,144 +3262,74 @@
                 const selectedCategoryRaw = document.getElementById('categorySelect')?.value || '';
                 const selectedCategory = (selectedCategoryRaw || '').trim();
                 const favoriteOnly = document.getElementById('favoriteOnlyFilter')?.checked || false;
-
                 if (!Array.isArray(this.cocktails)) this.cocktails = [];
 
                 this.filteredCocktails = this.cocktails.filter(r => {
                     const title = this.norm(r?.title);
                     const tags = this.norm(r?.tags);
                     const category = (r?.category || '').trim();
-                    
-                    // 從 ingredientsList 搜索配料
-                    const ingredientsText = (r?.ingredientsList || [])
-                        .map(ing => ing.ingredients || '')
-                        .join(' ')
-                        .toLowerCase();
-
-                    const matchesSearch = !searchTerm ||
-                        title.includes(searchTerm) ||
-                        tags.includes(searchTerm) ||
-                        ingredientsText.includes(searchTerm);
-
+                    const ingredientsText = this.norm(r?.ingredients);
+                    const matchesSearch = !searchTerm || title.includes(searchTerm) || tags.includes(searchTerm) || ingredientsText.includes(searchTerm);
                     const matchesCategory = !selectedCategory || category === selectedCategory;
                     const matchesFavorite = !favoriteOnly || (r?.favorite === true);
-
                     return matchesSearch && matchesCategory && matchesFavorite;
                 });
 
-                // 更新收藏數量顯示
                 const favoriteCount = this.cocktails.filter(c => c.favorite === true).length;
                 const countEl = document.getElementById('favoriteCount');
-                if (countEl) {
-                    countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
-                }
+                if (countEl) countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
 
                 this.render();
             }
 
             updateViewClass() { const container = document.getElementById('cocktailsContainer'); container.className = this.currentView === 'grid' ? 'cocktails-grid' : 'cocktails-list'; }
-
             updateStats() { const stats = document.getElementById('stats'); const total = this.cocktails.length, showing = this.filteredCocktails.length; stats.textContent = `顯示 ${showing} / ${total} 道雞尾酒譜`; }
 
-            // 獲取熱門標籤
             getPopularTags(limit = 15) {
                 const tagFrequency = {};
-
-                // 統計所有標籤的使用頻率
                 this.cocktails.forEach(cocktail => {
                     if (cocktail.tags) {
                         const tags = String(cocktail.tags).split(';').map(t => t.trim()).filter(Boolean);
-                        tags.forEach(tag => {
-                            tagFrequency[tag] = (tagFrequency[tag] || 0) + 1;
-                        });
+                        tags.forEach(tag => { tagFrequency[tag] = (tagFrequency[tag] || 0) + 1; });
                     }
                 });
-
-                // 按頻率排序並返回前N個
-                return Object.entries(tagFrequency)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, limit)
-                    .map(([tag, count]) => ({ tag, count }));
+                return Object.entries(tagFrequency).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([tag, count]) => ({ tag, count }));
             }
 
-            // 渲染熱門標籤按鈕
             renderPopularTags() {
                 const container = document.getElementById('popularTagsContainer');
                 if (!container) return;
-
                 const popularTags = this.getPopularTags(15);
-
-                if (popularTags.length === 0) {
-                    container.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">暫無標籤數據</div>';
-                    return;
-                }
-
+                if (popularTags.length === 0) { container.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">暫無標籤數據</div>'; return; }
                 const searchInput = document.getElementById('searchInput');
                 const currentSearchTerm = (searchInput?.value || '').toLowerCase().trim();
-
                 container.innerHTML = popularTags.map(({ tag, count }) => {
                     const isActive = currentSearchTerm.includes(tag.toLowerCase());
-                    return `
-                        <button 
-                            class="tag-btn ${isActive ? 'active' : ''}" 
-                            type="button"
-                            onclick="app.filterByTag('${tag.replace(/'/g, "\\'")}', this)"
-                            title="${tag} (${count} 道)"
-                        >
-                            #${tag}
-                            <span class="tag-count">(${count})</span>
-                        </button>
-                    `;
+                    return `<button class="tag-btn ${isActive ? 'active' : ''}" type="button" onclick="app.filterByTag('${tag.replace(/'/g, "\\'")}', this)" title="${tag} (${count} 道)">#${tag}<span class="tag-count">(${count})</span></button>`;
                 }).join('');
             }
 
-            // 通過標籤過濾
             filterByTag(tag, buttonEl) {
                 const searchInput = document.getElementById('searchInput');
                 const currentValue = searchInput.value.trim();
-
                 if (currentValue.toLowerCase().includes(tag.toLowerCase())) {
-                    // 如果已經包含該標籤，則移除
-                    searchInput.value = currentValue
-                        .split(/\s+/)
-                        .filter(t => t.toLowerCase() !== tag.toLowerCase())
-                        .join(' ')
-                        .trim();
+                    searchInput.value = currentValue.split(/\s+/).filter(t => t.toLowerCase() !== tag.toLowerCase()).join(' ').trim();
                 } else {
-                    // 添加標籤到搜索框
                     searchInput.value = currentValue ? `${currentValue} ${tag}` : tag;
                 }
-
-                // 觸發搜索
                 searchInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
-            // 更新熱門標籤顯示
-            updatePopularTags() {
-                this.renderPopularTags();
-            }
-
-
+            updatePopularTags() { this.renderPopularTags(); }
 
             async toggleFavorite(cocktailId) {
                 try {
                     const idx = this.cocktails.findIndex(c => c.id === cocktailId);
                     if (idx === -1) return;
-
-                    // 切換收藏狀態
                     this.cocktails[idx].favorite = !this.cocktails[idx].favorite;
-
-                    // 保存到本機儲存
                     await this.storage.saveCocktail(this.cocktails[idx]);
-
-                    // 嘗試同步到雲端
-                    if (this.cocktails[idx].favorite) {
-                        gas.showConnectionStatus('⭐ 已加入收藏', 'success');
-                    } else {
-                        gas.showConnectionStatus('🗑️ 已移除收藏', 'success');
-                    }
-
-                    // 重新篩選並渲染
+                    if (this.cocktails[idx].favorite) gas.showConnectionStatus('⭐ 已加入收藏（僅本機）', 'success');
+                    else gas.showConnectionStatus('🗑️ 已移除收藏', 'success');
                     this.filterCocktails();
                 } catch (err) {
                     console.error('切換收藏失敗：', err);
@@ -2861,13 +3343,8 @@
                 container.innerHTML = this.filteredCocktails.map(c => {
                     const tagsHtml = (c.tags ? String(c.tags).split(';').map(tag => `<span class="tag">${tag.trim()}</span>`).join('') : '');
                     const glassType = c.glass_type || '', alcoholContent = c.alcohol_content || '', difficulty = c.difficulty || '';
-                    
-                    // 配料列表 - 從 ingredientsList 讀取
-                    const ingredientsList = c.ingredientsList || [];
-                    const ingredientsHtml = ingredientsList.length > 0
-                        ? ingredientsList.map(ing => `<div>• ${ing.ingredients || ''} ${ing.quantity ? ing.quantity + ' ' + (ing.unit || '') : ''}</div>`).join('')
-                        : '';
-                    
+                    const ingredientsArr = this.parseIngredients(c.ingredients);
+                    const ingredientsHtml = ingredientsArr.length > 0 ? ingredientsArr.map(ing => `<div>• ${ing}</div>`).join('') : '';
                     const instructionsList = Array.isArray(c.instructions) ? c.instructions : String(c.instructions ?? '').split('>');
                     return `
         <div class="cocktail-card">
@@ -2875,8 +3352,8 @@
           <div class="cocktail-content">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap: 8px;">
               <h3 class="cocktail-title" style="flex: 1;">${c.title || ''}</h3>
-              <button onclick="app.toggleFavorite('${c.id}')" class="btn" style="font-size:.8rem; padding:4px 8px; background: ${c.favorite ? '#ffc107' : 'rgba(255,255,255,0.2)'}; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="${c.favorite ? '移除收藏' : '加入收藏'}">⭐ ${c.favorite ? '已收藏' : '收藏'}</button>
-              <button onclick="app.editCocktail('${c.id}')" class="btn edit-only" style="font-size:.8rem; padding:4px 8px;">編輯</button>
+              <button onclick="app.toggleFavorite('${c.id}')" class="btn favorite-toggle" style="font-size:.8rem; padding:4px 8px; background: ${c.favorite ? '#ffc107' : 'rgba(255,255,255,0.2)'}; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="${c.favorite ? '移除收藏' : '加入收藏'}">⭐ ${c.favorite ? '已收藏' : '收藏'}</button>
+              <button onclick="app.editCocktail('${c.id}')" class="btn cocktail-write-only" style="font-size:.8rem; padding:4px 8px;">編輯</button>
             </div>
             <div class="cocktail-meta">
               ${glassType ? `<span class="meta-item">🥃 ${glassType}</span>` : ''}
@@ -2897,78 +3374,28 @@
             render() {
                 this.updateStats();
                 this.updatePopularTags();
-                // 更新收藏計數
                 const favoriteCount = this.cocktails.filter(c => c.favorite === true).length;
                 const countEl = document.getElementById('favoriteCount');
-                if (countEl) {
-                    countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
-                }
+                if (countEl) countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
                 this.renderCocktails();
                 this.updateViewClass();
-            }
-
-            async updateStorageStats() {
-                try {
-                    const s = await this.storage.getStorageStats();
-                    const el = document.getElementById('storageStats');
-                    if (el) {
-                        el.innerHTML = `<p><strong>酒譜數量：</strong> ${s.cocktailCount} 個</p><p><strong>圖片數量：</strong> ${s.imageCount} 張</p><p><strong>圖片大小：</strong> ${s.formattedImageSize}</p><p><strong>最後更新：</strong> ${new Date().toLocaleString('zh-TW')}</p>`;
-                    }
-                } catch (e) {
-                    console.warn('統計失敗：', e);
-                }
             }
 
             async confirmClearData() {
                 if (confirm('⚠️ 確定要清除本機快取嗎？不影響雲端資料。')) {
                     try {
                         await this.storage.clearAllData();
-                        this.cocktails = [];
-                        this.filteredCocktails = [];
-                        this.updateCategories();
-                        this.render();
-                        await this.updateStorageStats();
+                        this.cocktails = []; this.filteredCocktails = [];
+                        this.updateCategories(); this.render();
                         gas.showConnectionStatus('✅ 本機快取已清除', 'success');
-                    } catch (err) {
-                        alert('清除失敗：' + err.message);
-                    }
+                    } catch (err) { alert('清除失敗：' + err.message); }
                 }
             }
 
             async migrateLocalData() {
                 const all = await this.storage.getAllCocktails();
-                for (const c of all) {
-                    const fixed = normalizeRecord(c);
-                    await this.storage.saveCocktail(fixed);
-                    
-                    // 如果舊數據中有 ingredients 欄位，嘗試遷移到 Ingredients 表格
-                    if (c.ingredients) {
-                        const oldIngredients = String(c.ingredients).split('+').map(s => s.trim()).filter(Boolean);
-                        const ingredientsList = oldIngredients.map(ing => ({
-                            ingredients: ing,
-                            quantity: '',
-                            unit: ''
-                        }));
-                        if (ingredientsList.length > 0) {
-                            await this.storage.saveIngredients(c.id, ingredientsList);
-                        }
-                    }
-                }
-                this.cocktails = (await this.storage.getAllCocktails()).map(c => ({
-                    ...c,
-                    favorite: c.favorite === true  // 确保favorite字段存在
-                }));
-                
-                // 為每個 cocktail 讀取配料
-                for (const c of this.cocktails) {
-                    try {
-                        c.ingredientsList = await this.storage.getIngredients(c.id);
-                    } catch (e) {
-                        console.warn(`讀取配料 ${c.id} 失敗:`, e);
-                        c.ingredientsList = [];
-                    }
-                }
-                
+                for (const c of all) { const fixed = normalizeRecord(c); await this.storage.saveCocktail(fixed); }
+                this.cocktails = (await this.storage.getAllCocktails()).map(c => ({ ...c, favorite: c.favorite === true }));
                 this.filteredCocktails = [...this.cocktails];
                 this.render();
                 alert('✅ 已完成本機資料格式遷移');
@@ -2977,30 +3404,26 @@
             showError(msg) { alert(msg); }
         }
 
-        // 初始化應用程式
         const app = new CocktailApp();
         window.app = app;
+        window.ingredientsApp = ingredientsApp;
+        window.glassesApp = glassesApp;
+        window.auditApp = auditApp;
+        window.configApp = configApp;
 
-        // 全域函數：檢查管理員權限
-        window.requireAdmin = function (operation = '此操作') {
-            return adminAuth.checkPermission(operation);
-        };
+        window.requireAdmin = function (operation = '此操作') { return adminAuth.checkPermission(operation); };
 
-        // 暴露調試函數到全域
         window.gasDebug = {
             test: () => gas.test(),
             list: () => gas.list(),
-            upload: (data) => gas.upsert(data),
+            listIngredients: () => gas.listIngredients(),
             showUrl: () => console.log('GAS URL:', gas.url),
-            clearLogs: () => {
-                const debugContent = document.getElementById('debugContent');
-                if (debugContent) debugContent.innerHTML = '已清除日誌';
-            },
             adminLogin: (username, password) => gas.adminLogin(username, password),
+            refreshToken: () => adminAuth.tryRefreshAccessToken(),
             checkAdmin: () => console.log('Admin Status:', {
-                isAdmin: adminAuth.isAdmin,
-                user: adminAuth.adminUser,
-                token: adminAuth.adminToken ? 'Present' : 'None'
+                isAdmin: adminAuth.isAdmin, user: adminAuth.adminUser,
+                accessToken: adminAuth.adminToken ? 'Present' : 'None',
+                refreshToken: adminAuth.refreshToken ? 'Present' : 'None'
             })
         };
     </script>
