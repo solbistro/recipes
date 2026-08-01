@@ -7,7 +7,7 @@
     <title>雞尾酒譜瀏覽</title>
 
     <!-- PWA Meta -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1446,12 +1446,11 @@
 </head>
 
 <body>
-    <!-- 【前後端拆分版】本頁由『前端 WebApp 專案』的 doGet 以樣板注入「API 專案」的 /exec 網址。
-         前端專案的 Code.gs 內設定 API_URL 常數，透過 <?= apiUrl ?> 帶入此處的 window.__API_URL__。
-         若未透過 GAS 部署（例如本機直接開啟 HTML），apiUrl 會是空字串，
-         此時會退回讀取 localStorage 的 gasUrl，仍可手動指定 API 網址。 -->
+    <!-- 【GitHub Pages 版】本頁為純靜態頁面，直接由 GitHub Pages 提供。
+         下方 window.__API_URL__ 直接寫死為「API 專案」的 /exec 網址（後端仍在 Google Apps Script）。
+         若日後 API 網址變更，只需修改這一行即可。 -->
     <script>
-        window.__API_URL__ = "<?= apiUrl ?>";
+        window.__API_URL__ = "https://script.google.com/macros/s/AKfycbxLfVJbaIup1CCoz-3jGKibzu6DA2KeXWjT6WhRpMrcpI9-hlnnZH4zf5P2YUCcx33PtA/exec";
     </script>
 
     <!-- 全站登入閘門：未登入時覆蓋整個畫面，登入後才顯示 App -->
@@ -1988,7 +1987,7 @@
             _listInflight: null,
             _refreshInflight: null, // access token 換發併發去重
 
-            // API 網址：優先使用前端專案注入的 __API_URL__；否則退回 localStorage（手動指定用）
+            // API 網址：優先使用頁面注入的 __API_URL__；否則退回 localStorage（手動指定用）
             get url() { return window.__API_URL__ || localStorage.getItem('gasUrl') || ''; },
             set url(v) { localStorage.setItem('gasUrl', this._clean(v)); },
 
