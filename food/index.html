@@ -1,0 +1,3437 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>美食食譜瀏覽</title>
+
+    <!-- PWA Meta -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e2894a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="美食食譜">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <style>
+        /* ============ 設計變數（Speakeasy / 微醺酒吧質感）============ */
+        :root {
+            --bg-base: #17110d;
+            --ink: #f6ede1;
+            --ink-muted: rgba(246, 237, 225, .64);
+            --ink-faint: rgba(246, 237, 225, .40);
+            --accent: #e2894a;
+            --accent-strong: #f4b06a;
+            --accent-deep: #b45a26;
+            --glass: rgba(255, 255, 255, .055);
+            --glass-strong: rgba(255, 255, 255, .09);
+            --hairline: rgba(244, 176, 106, .18);
+            --card: #fbf6ee;
+            --card-ink: #2c2118;
+            --card-muted: #8a7a64;
+            --card-line: #efe4d3;
+            --danger: #c25a44;
+            --danger-soft: #f3d7cf;
+            --success: #6f9c66;
+            --radius: 18px;
+            --radius-sm: 12px;
+            --shadow: 0 18px 48px rgba(0, 0, 0, .45);
+            --font-display: 'Fraunces', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+            --font-body: 'Manrope', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--ink);
+            background-color: var(--bg-base);
+            background-image:
+                radial-gradient(900px 600px at 12% -8%, rgba(226, 137, 74, .18), transparent 60%),
+                radial-gradient(800px 620px at 92% 8%, rgba(176, 74, 52, .16), transparent 58%),
+                radial-gradient(1000px 800px at 50% 120%, rgba(107, 142, 88, .12), transparent 60%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: .045;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 28px 22px 64px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ============ 標題區 ============ */
+        header {
+            text-align: center;
+            color: var(--ink);
+            margin-bottom: 34px;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.1rem, 5vw, 3.1rem);
+            font-weight: 600;
+            letter-spacing: .01em;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            background: linear-gradient(180deg, #fff8ec 0%, var(--accent-strong) 70%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.05rem;
+            color: var(--ink-muted);
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            margin-bottom: 26px;
+        }
+
+        /* ============ 提示橫幅 ============ */
+        .age-warning {
+            background: rgba(212, 164, 96, .12);
+            border: 1px solid var(--hairline);
+            color: var(--accent-strong);
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            margin: 0 auto 20px;
+            max-width: 560px;
+            text-align: center;
+            font-weight: 500;
+            font-size: .92rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .install-prompt {
+            background: linear-gradient(135deg, rgba(212, 164, 96, .92), rgba(169, 116, 58, .92));
+            color: #1d160e;
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 18px;
+            text-align: center;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+
+        .install-btn {
+            background: #1d160e;
+            color: var(--accent-strong);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: .25s;
+        }
+
+        .install-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .offline-indicator {
+            background: rgba(194, 90, 68, .92);
+            color: #fff;
+            padding: 9px 16px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .connection-status {
+            background: var(--glass);
+            color: var(--ink);
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            text-align: center;
+            font-size: .9rem;
+            border: 1px solid var(--hairline);
+            backdrop-filter: blur(10px);
+        }
+
+        .connection-status.success {
+            background: rgba(111, 156, 102, .9);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .connection-status.error {
+            background: rgba(194, 90, 68, .92);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .connection-status.warning {
+            background: rgba(212, 164, 96, .92);
+            color: #1d160e;
+            border-color: transparent;
+        }
+
+        /* ============ 管理員控制 ============ */
+        .admin-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--glass);
+            padding: 6px 12px;
+            border-radius: 24px;
+            border: 1px solid var(--hairline);
+        }
+
+        .admin-status-text {
+            font-size: .85rem;
+            color: var(--ink-muted);
+            font-weight: 600;
+            min-width: 76px;
+        }
+
+        .admin-mode .admin-controls {
+            background: rgba(111, 156, 102, .18);
+            border-color: rgba(111, 156, 102, .45);
+        }
+
+        .admin-mode .admin-status-text {
+            color: #a9d3a0;
+        }
+
+        .guest-mode .admin-controls {
+            background: var(--glass);
+            border-color: var(--hairline);
+        }
+
+        /* ============ 管理員登入彈窗 ============ */
+        .admin-login-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(12, 9, 7, .68);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .admin-login-modal.show {
+            display: flex;
+        }
+
+        .admin-login-form {
+            background: var(--card);
+            padding: 32px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            width: min(420px, 92vw);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .admin-login-form h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin: 0 0 24px;
+            text-align: center;
+            color: var(--card-ink);
+        }
+
+        .admin-login-form .form-group {
+            margin-bottom: 18px;
+        }
+
+        .admin-login-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--card-ink);
+        }
+
+        .admin-login-form input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--card-line);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: #fff;
+            transition: .2s;
+        }
+
+        .admin-login-form input:focus {
+            outline: none;
+            border-color: var(--accent-deep);
+            box-shadow: 0 0 0 3px rgba(169, 116, 58, .15);
+        }
+
+        .admin-login-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .admin-login-actions button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .btn-login {
+            background: var(--accent-deep);
+            color: #fff;
+        }
+
+        .btn-login:hover {
+            background: #8f6230;
+        }
+
+        .btn-cancel {
+            background: #ece2d2;
+            color: var(--card-ink);
+        }
+
+        .btn-cancel:hover {
+            background: #ddd0bb;
+        }
+
+        .admin-error {
+            background: var(--danger-soft);
+            color: #7a2e1f;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: .9rem;
+        }
+
+        .admin-success {
+            background: #d8ecd4;
+            color: #2f6a2a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: .9rem;
+        }
+
+        /* ============ 依權限顯示/隱藏編輯元件 ============ */
+        /* 收藏鈕永遠可見；其餘卡片按鈕（編輯）在訪客模式隱藏 */
+        .guest-mode .recipe-card .btn {
+            display: none !important;
+        }
+        .guest-mode .recipe-card .btn.favorite-toggle {
+            display: inline-flex !important;
+        }
+
+        /* .recipe-write-only：需要 write_recipe 權限；預設隱藏，具權限時由 body.can-write-recipe 顯示 */
+        .recipe-write-only { display: none !important; }
+        body.can-write-recipe .recipe-write-only { display: inline-flex !important; }
+
+        /* .ingredient-write-only：需要 write_ingredient 權限 */
+        .ingredient-write-only { display: none !important; }
+        body.can-write-ingredient .ingredient-write-only { display: revert !important; }
+
+        /* .cookware-write-only：需要 write_cookware 權限 */
+        .cookware-write-only { display: none !important; }
+        body.can-write-cookware .cookware-write-only { display: revert !important; }
+
+        /* 舊的 .edit-only：仍代表「登入後可見」，在訪客模式隱藏（相容既有標記） */
+        .guest-mode .edit-only {
+            display: none !important;
+        }
+
+        .edit-disabled {
+            opacity: .5;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* ============ 篩選列 ============ */
+        .filters {
+            background: var(--glass);
+            backdrop-filter: blur(14px);
+            border-radius: var(--radius);
+            padding: 22px;
+            margin-bottom: 28px;
+            border: 1px solid var(--hairline);
+            box-shadow: var(--shadow);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 14px;
+            align-items: center;
+        }
+
+        input[type="text"],
+        select,
+        input[type="number"],
+        input[type="url"],
+        textarea {
+            padding: 12px 16px;
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, .94);
+            color: var(--card-ink);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            transition: .25s;
+            width: 100%;
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: #9b8d78;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            background: #fff;
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .28);
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--glass-strong);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .view-btn {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            color: var(--ink-muted);
+            cursor: pointer;
+            font-weight: 600;
+            transition: .25s;
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            color: #1d160e;
+        }
+
+        .stats {
+            text-align: center;
+            color: var(--ink-muted);
+            margin-bottom: 24px;
+            font-size: .9rem;
+            letter-spacing: .04em;
+        }
+
+        /* ============ 食譜卡片 ============ */
+        .recipes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 22px;
+        }
+
+        .recipes-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .recipe-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, .04);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+            transition: transform .3s ease, box-shadow .3s ease;
+            animation: fadeIn .5s ease both;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 44px rgba(0, 0, 0, .4);
+        }
+
+        .recipes-list .recipe-card {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+        }
+
+        .recipe-image {
+            width: 100%;
+            aspect-ratio: 16/10;
+            background: linear-gradient(135deg, #efe6d6, #e2d4bd);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-size: 2.4rem;
+        }
+
+        .recipes-list .recipe-image {
+            height: 100%;
+            aspect-ratio: auto;
+        }
+
+        .recipe-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .recipe-content {
+            padding: 20px 22px 22px;
+        }
+
+        .recipe-title {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--card-ink);
+            flex: 1;
+            margin: 0 0 8px;
+            line-height: 1.2;
+        }
+
+        .recipe-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: .82rem;
+            color: var(--card-muted);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .recipe-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+
+        .tag {
+            background: rgba(169, 116, 58, .12);
+            color: var(--accent-deep);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 600;
+        }
+
+        .recipe-details .ingredients-list,
+        .recipe-details .instructions-list {
+            padding: 10px 2px 4px;
+            color: #4a3f30;
+            font-size: .92rem;
+            line-height: 1.7;
+        }
+
+        .recipe-details .instruction {
+            margin-bottom: 4px;
+        }
+
+        /* ============ 熱門標籤 ============ */
+        .popular-tags-section {
+            background: var(--glass);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px solid var(--hairline);
+        }
+
+        .popular-tags-title {
+            font-size: .78rem;
+            color: var(--accent-strong);
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .popular-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-btn {
+            background: var(--glass-strong);
+            color: var(--ink);
+            padding: 6px 13px;
+            border-radius: 20px;
+            border: 1px solid var(--hairline);
+            cursor: pointer;
+            font-size: .8rem;
+            font-weight: 600;
+            transition: all .25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .tag-btn:hover {
+            background: rgba(212, 164, 96, .2);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .tag-btn.active {
+            background: var(--accent);
+            border-color: var(--accent-strong);
+            color: #1d160e;
+        }
+
+        .tag-count {
+            font-size: .7rem;
+            opacity: .8;
+            font-weight: 700;
+        }
+
+        /* ============ 展開明細 ============ */
+        details {
+            margin-bottom: 8px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--accent-deep);
+            padding: 8px 0;
+            border-bottom: 1px solid var(--card-line);
+            list-style: none;
+        }
+
+        summary:hover {
+            color: #8f6230;
+        }
+
+        /* ============ 導覽分頁 ============ */
+        .nav-tabs {
+            display: inline-flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 22px;
+            padding: 6px;
+            background: var(--glass);
+            border: 1px solid var(--hairline);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--ink-muted);
+            padding: 11px 22px;
+            border-radius: 22px;
+            cursor: pointer;
+            transition: .25s;
+            font-size: .98rem;
+            font-weight: 600;
+        }
+
+        .nav-btn:hover {
+            color: var(--ink);
+        }
+
+        .nav-btn.active {
+            background: var(--accent);
+            color: #1d160e;
+            box-shadow: 0 6px 18px rgba(212, 164, 96, .3);
+        }
+
+        .nav-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            pointer-events: auto;
+        }
+
+        .nav-btn:disabled:hover {
+            background: transparent;
+            transform: none;
+        }
+
+        .nav-btn.edit-disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .nav-btn.role-hidden {
+            display: none !important;
+        }
+
+        /* ============ 分頁 ============ */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn .4s ease both;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ink-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3.6rem;
+            margin-bottom: 18px;
+            opacity: .8;
+        }
+
+        .empty-state h3 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--ink-muted);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--hairline);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        /* ============ 表單 ============ */
+        .add-recipe-form {
+            text-align: left;
+        }
+
+        .form-section {
+            background: var(--glass);
+            border-radius: var(--radius);
+            padding: 22px;
+            margin: 18px 0;
+            border: 1px solid var(--hairline);
+            backdrop-filter: blur(12px);
+        }
+
+        .form-section h3 {
+            font-family: var(--font-display);
+            color: var(--accent-strong);
+            margin-bottom: 16px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            color: var(--ink-muted);
+            font-weight: 600;
+            font-size: .9rem;
+            margin-bottom: 4px;
+        }
+
+        .tags-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .tags-display .tag {
+            cursor: pointer;
+        }
+
+        .ingredient-item,
+        .instruction-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .instruction-item span {
+            color: var(--accent-strong);
+        }
+
+        .ingredient-item input,
+        .instruction-item input {
+            flex: 1;
+        }
+
+        .add-btn,
+        .remove-btn,
+        .btn {
+            cursor: pointer;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 10px 18px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            transition: .25s;
+        }
+
+        .add-btn {
+            background: var(--glass-strong);
+            color: var(--accent-strong);
+            border: 1px dashed var(--hairline);
+            margin-top: 8px;
+        }
+
+        .add-btn:hover {
+            background: rgba(212, 164, 96, .16);
+            transform: translateY(-1px);
+        }
+
+        .remove-btn {
+            background: var(--danger-soft);
+            color: #7a2e1f;
+            padding: 8px 14px;
+            font-size: .85rem;
+        }
+
+        .remove-btn:hover {
+            background: #ecc4ba;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #1d160e;
+            padding: 12px 24px;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-strong);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--glass-strong);
+            color: var(--ink);
+            padding: 12px 24px;
+            border: 1px solid var(--hairline);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, .14);
+        }
+
+        .btn-danger {
+            background: var(--danger-soft);
+            color: #7a2e1f;
+        }
+
+        .btn-danger:hover {
+            background: #ecc4ba;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 22px;
+        }
+
+        /* ============ 頂部列 ============ */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 22px;
+            background: rgba(22, 18, 16, .82);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--hairline);
+        }
+
+        .brand {
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--accent-strong);
+            font-size: 1.25rem;
+            letter-spacing: .01em;
+        }
+
+        .topbar .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .topbar .btn {
+            padding: 9px 16px;
+            font-size: .9rem;
+        }
+
+        /* ============ 編輯抽屜 ============ */
+        .drawer {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: min(440px, 96vw);
+            background: var(--card);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, .5);
+            padding: 24px;
+            overflow: auto;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform .32s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .drawer:not(.hidden) {
+            transform: translateX(0);
+        }
+
+        .drawer.hidden {
+            transform: translateX(100%);
+        }
+
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--card-line);
+        }
+
+        .drawer-header h3 {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--card-ink);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-close {
+            background: #ece2d2;
+            color: var(--card-ink);
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+        }
+
+        .btn-close:hover {
+            background: var(--danger);
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        .edit-form label {
+            display: block;
+            margin: 16px 0 6px;
+            font-size: .88rem;
+            font-weight: 600;
+            color: var(--card-muted);
+        }
+
+        .edit-form input,
+        .edit-form textarea,
+        .edit-form select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--card-line);
+            background: #fff;
+            color: var(--card-ink);
+        }
+
+        .edit-form input:focus,
+        .edit-form textarea:focus,
+        .edit-form select:focus {
+            outline: none;
+            border-color: var(--accent-deep);
+            transform: none;
+            box-shadow: 0 0 0 3px rgba(169, 116, 58, .14);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .drawer-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid var(--card-line);
+            flex-wrap: wrap;
+        }
+
+        .drawer-actions .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        #imagePreview img,
+        #addImagePreview img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 8px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+        }
+
+        #addImagePreview {
+            padding: 8px 0;
+            text-align: center;
+        }
+
+        #imagePreview {
+            margin: 8px 0;
+        }
+
+        .debug-panel {
+            background: rgba(0, 0, 0, .5);
+            color: var(--ink);
+            padding: 16px;
+            border-radius: 12px;
+            margin: 16px 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: .85rem;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--hairline);
+        }
+
+        .debug-panel h4 {
+            margin: 0 0 8px;
+            color: var(--accent-strong);
+        }
+
+        /* ============ 動畫 ============ */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ============ 響應式 ============ */
+        @media (max-width: 480px) {
+            .drawer-actions {
+                flex-direction: column;
+            }
+
+            .drawer-actions .btn {
+                width: 100%;
+            }
+
+            .popular-tags-container {
+                gap: 6px;
+            }
+
+            .tag-btn {
+                padding: 5px 10px;
+                font-size: .75rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 56px;
+            }
+
+            #recipesContainer.recipes-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .recipes-list .recipe-card {
+                grid-template-columns: 1fr;
+            }
+
+            .recipes-list .recipe-image {
+                aspect-ratio: 16/10;
+            }
+
+            .filter-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .topbar {
+                flex-direction: column;
+                gap: 12px;
+                padding: 14px 16px;
+            }
+
+            .topbar .actions {
+                justify-content: center;
+            }
+
+            .admin-controls {
+                order: -1;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+                border-radius: 24px;
+            }
+
+            .nav-btn {
+                padding: 10px 18px;
+            }
+
+            .drawer {
+                width: 100vw;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .form-actions .btn {
+                width: 100%;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ============ 全站登入閘門 ============ */
+        .auth-gate {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background:
+                radial-gradient(800px 500px at 20% 0%, rgba(212, 164, 96, .22), transparent 60%),
+                radial-gradient(700px 520px at 90% 20%, rgba(150, 70, 55, .18), transparent 58%),
+                var(--bg-base);
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* 未登入時：顯示閘門、隱藏主要 App（頂部列與內容） */
+        body.logged-out .auth-gate { display: flex; }
+        body.logged-out .topbar,
+        body.logged-out .container { display: none !important; }
+
+        .auth-gate-card {
+            background: var(--card);
+            color: var(--card-ink);
+            width: min(400px, 94vw);
+            border-radius: 20px;
+            padding: 34px 30px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .auth-gate-brand {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: var(--card-ink);
+            margin-bottom: 4px;
+        }
+
+        .auth-gate-sub {
+            color: var(--card-muted);
+            font-size: .95rem;
+            margin-bottom: 20px;
+        }
+
+        .auth-gate-card .form-group {
+            text-align: left;
+            margin-bottom: 14px;
+        }
+
+        .auth-gate-card label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--card-ink);
+        }
+
+        .auth-gate-card input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--card-line);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: #fff;
+        }
+
+        .auth-gate-card input:focus {
+            outline: none;
+            border-color: var(--accent-deep);
+            box-shadow: 0 0 0 3px rgba(169, 116, 58, .15);
+        }
+
+        .auth-gate-hint {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid var(--card-line);
+            font-size: .8rem;
+            color: var(--card-muted);
+            line-height: 1.6;
+        }
+
+        /* ============ 收藏按鈕 ============ */
+        .favorite-btn {
+            transition: all .3s ease;
+            font-size: .8rem;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .favorite-btn.active {
+            background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+            color: #1d160e;
+            font-weight: 700;
+        }
+
+        .favorite-btn.inactive {
+            background: var(--glass-strong);
+            color: var(--ink);
+        }
+
+        #favoriteCount {
+            animation: fadeIn .3s ease;
+        }
+
+
+        /* ============ 編輯抽屜：淺底專屬配色覆寫（沿用新增版面但確保可讀性）============ */
+        .drawer .form-section {
+            background: #fff;
+            border: 1px solid var(--card-line);
+            backdrop-filter: none;
+            padding: 18px;
+            margin: 14px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .04);
+        }
+
+        .drawer .form-section h3 {
+            color: var(--card-ink);
+        }
+
+        .drawer .form-group label {
+            color: var(--card-muted);
+        }
+
+        .drawer input,
+        .drawer select,
+        .drawer textarea {
+            background: #fff;
+            color: var(--card-ink);
+        }
+
+        .drawer .add-btn {
+            background: #fbf3e6;
+            color: var(--accent-deep);
+            border: 1px dashed var(--accent);
+        }
+
+        .drawer .add-btn:hover {
+            background: #f6e9d3;
+        }
+
+        .drawer .btn-secondary {
+            background: #ece2d2;
+            color: var(--card-ink);
+            border: none;
+        }
+
+        .drawer .btn-secondary:hover {
+            background: #ddd0bb;
+        }
+
+        .drawer .tag {
+            background: rgba(169, 116, 58, .12);
+            color: var(--accent-deep);
+        }
+
+        /* ============ 新增：資料表格（食材庫 / 稽核紀錄 / 系統設定）============ */
+        .data-table-wrap {
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow-x: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            color: var(--card-ink);
+            font-size: .92rem;
+            min-width: 560px;
+        }
+
+        table.data-table th,
+        table.data-table td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--card-line);
+            vertical-align: top;
+        }
+
+        table.data-table th {
+            background: rgba(169, 116, 58, .1);
+            color: var(--accent-deep);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        table.data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.data-table tbody tr:hover {
+            background: rgba(212, 164, 96, .06);
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .pill.success {
+            background: #d8ecd4;
+            color: #2f6a2a;
+        }
+
+        .pill.fail {
+            background: var(--danger-soft);
+            color: #7a2e1f;
+        }
+
+        .pill.role {
+            background: rgba(169, 116, 58, .12);
+            color: var(--accent-deep);
+        }
+
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 220px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--card-line);
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+        }
+
+        .config-row .config-key {
+            font-weight: 700;
+            color: var(--card-ink);
+        }
+
+        .config-row .config-desc {
+            font-size: .78rem;
+            color: var(--card-muted);
+            display: block;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 640px) {
+            .config-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <!-- 字型：線上載入，離線自動退回優雅襯線/系統字型 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- 【GitHub Pages 版】本頁為純靜態頁面，直接由 GitHub Pages 提供。
+         下方 window.__API_URL__ 直接寫死為「API 專案」的 /exec 網址（後端仍在 Google Apps Script）。
+         若日後 API 網址變更，只需修改這一行即可。 -->
+    <script>
+        window.__API_URL__ = "https://script.google.com/macros/s/AKfycbxuqBvzS7_rc0WVfRoP2nqVmAaf4LFh2FaE0qOO6e55cWtDJHxHMJ2PKiXH8oTH16Qy/exec";
+    </script>
+
+    <!-- 全站登入閘門：未登入時覆蓋整個畫面，登入後才顯示 App -->
+    <div id="authGate" class="auth-gate">
+        <div class="auth-gate-card">
+            <div class="auth-gate-brand">🍽️ 美食食譜</div>
+            <p class="auth-gate-sub">請先登入以瀏覽內容</p>
+            <div id="authGateError" class="admin-error" style="display:none;"></div>
+            <div id="authGateSuccess" class="admin-success" style="display:none;"></div>
+            <form id="authGateForm">
+                <div class="form-group">
+                    <label for="authGateUsername">帳號</label>
+                    <input type="text" id="authGateUsername" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="authGatePassword">密碼</label>
+                    <input type="password" id="authGatePassword" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-login" style="width:100%;margin-top:8px;">登入</button>
+            </form>
+            <div class="auth-gate-hint">
+                <p>任何啟用中的帳號皆可登入（含一般用戶）。</p>
+                <p>預設管理員：admin / recipe2024（首次使用請盡快改密碼）</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理員登入彈窗 -->
+    <div id="adminLoginModal" class="admin-login-modal">
+        <div class="admin-login-form">
+            <h3>🔐 管理員登入</h3>
+            <div id="adminLoginError" class="admin-error" style="display: none;"></div>
+            <div id="adminLoginSuccess" class="admin-success" style="display: none;"></div>
+
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <label for="adminUsername">用戶名</label>
+                    <input type="text" id="adminUsername" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="adminPassword">密碼</label>
+                    <input type="password" id="adminPassword" required autocomplete="current-password">
+                </div>
+                <div class="admin-login-actions">
+                    <button type="submit" class="btn-login">登入</button>
+                    <button type="button" class="btn-cancel" onclick="adminAuth.hideLoginModal()">取消</button>
+                </div>
+            </form>
+
+            <div
+                style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 0.85rem; color: #718096; text-align: center;">
+                <p>⚠️ 管理員模式才能編輯和刪除食譜</p>
+                <p>預設帳號：admin / recipe2024</p>
+                <p>（首次使用請務必修改密碼）</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA 安裝提示 -->
+    <div id="installPrompt" class="install-prompt">
+        <span>🍽️ 將美食食譜安裝到您的手機，隨時離線使用！</span>
+        <button id="installBtn" class="install-btn">立即安裝</button>
+        <button onclick="this.parentElement.style.display='none'" class="install-btn"
+            style="background:#f56565;color:white;">稍後</button>
+    </div>
+
+    <!-- 離線狀態指示 -->
+    <div id="offlineIndicator" class="offline-indicator">📡 目前處於離線模式，部分功能可能受限</div>
+
+    <!-- 連線狀態指示 -->
+    <div id="connectionStatus" class="connection-status hidden">正在檢查連線狀態...</div>
+
+    <header class="topbar">
+        <div class="brand">美食食譜 WebApp</div>
+        <div class="actions">
+            <button id="btnSync" class="btn btn-primary" type="button">🔄 同步（從雲端讀取）</button>
+            <button id="btnClearData" class="btn btn-danger" type="button">🗑️ 清除本機快取</button>
+
+            <!-- 管理員控制整合 -->
+            <div id="adminControls" class="admin-controls guest-mode">
+                <span id="adminStatusText" class="admin-status-text">訪客模式</span>
+                <button id="adminLoginBtn" class="btn btn-primary"
+                    style="padding: 6px 12px; font-size: 0.85rem;">管理員登入</button>
+                <button id="adminLogoutBtn" class="btn btn-secondary"
+                    style="padding: 6px 12px; font-size: 0.85rem; display: none;">登出</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <header>
+            <h1>🍽️ 美食食譜瀏覽</h1>
+            <p class="subtitle">探索家常料理，發掘餐桌上的美味</p>
+            <div class="age-warning">🍳 精選家常與宴客料理，在家也能重現餐廳級美味</div>
+            <nav class="nav-tabs">
+                <button class="nav-btn active" data-page="browse" type="button">📖 瀏覽食譜</button>
+                <button class="nav-btn" data-page="add" data-perm="write_recipe" type="button">➕ 新增食譜</button>
+                <button class="nav-btn" data-page="ingredients" type="button">🧂 食材庫</button>
+                <button class="nav-btn" data-page="cookware" type="button">🍳 器具</button>
+                <button class="nav-btn role-hidden" data-page="audit" data-perm="view_audit" type="button">📜 稽核紀錄</button>
+                <button class="nav-btn role-hidden" data-page="config" data-perm="manage_config" type="button">⚙️ 系統設定</button>
+            </nav>
+        </header>
+
+        <!-- 瀏覽區 -->
+        <div class="page active" id="browsePage">
+            <div class="filters">
+                <div class="filter-row">
+                    <input type="text" id="searchInput" placeholder="🔍 搜尋料理名稱、食材或標籤（如：番茄）..." />
+                    <select id="categorySelect">
+                        <option value="">📋 全部分類</option>
+                    </select>
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="grid" type="button">網格</button>
+                        <button class="view-btn" data-view="list" type="button">列表</button>
+                    </div>
+                </div>
+                <div class="filter-row" style="margin-top: 12px;">
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); flex-wrap: wrap;">
+                        <input type="checkbox" id="favoriteOnlyFilter" onchange="app.filterRecipes()"
+                            style="cursor: pointer; width: 18px; height: 18px;">
+                        <span>⭐ 只顯示收藏</span>
+                    </label>
+                    <span id="favoriteCount"
+                        style="color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-left: auto;"></span>
+                </div>
+                <!-- 熱門標籤搜索欄 -->
+                <div class="popular-tags-section">
+                    <div class="popular-tags-title">🏷️ 熱門標籤</div>
+                    <div class="popular-tags-container" id="popularTagsContainer">
+                        <div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">載入中...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats" id="stats">載入中...</div>
+            <div id="recipesContainer" class="recipes-grid">
+                <div class="loading">正在載入料理資料</div>
+            </div>
+        </div>
+
+        <!-- 新增區 -->
+        <div class="page" id="addPage">
+            <div class="add-recipe-form">
+                <div class="success-message" id="successMessage"
+                    style="display:none;background:rgba(72,187,120,.9);color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:20px;font-weight:600;backdrop-filter:blur(10px);">
+                    ✅ 美食食譜新增成功！
+                </div>
+
+                <form id="addRecipeForm">
+                    <div class="form-section">
+                        <h3>📄 基本資訊</h3>
+                        <div class="form-group">
+                            <label for="recipeTitle">料理名稱 *</label>
+                            <input type="text" id="recipeTitle" placeholder="例如：番茄炒蛋、紅燒牛肉（可留空）" />
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="recipeCategory">分類</label>
+                                <select id="recipeCategory">
+<option value="">選擇分類</option>
+                                    <option value="主菜">主菜</option>
+                                    <option value="湯品">湯品</option>
+                                    <option value="開胃菜">開胃菜</option>
+                                    <option value="主食">主食</option>
+                                    <option value="甜點">甜點</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cookwareType">器具</label>
+                                <select id="cookwareType">
+                                    <option value="">選擇器具</option>
+                                    <!-- 器具選項由 Cookware 資料表動態載入 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="calories">熱量 (kcal)</label>
+                                <input type="number" id="calories" min="0" placeholder="例如：450" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cookTime">烹調時間</label>
+                                <input type="text" id="cookTime" placeholder="例如：30 分鐘" />
+                            </div>
+                            <div class="form-group">
+                                <label for="difficulty">難度等級</label>
+                                <select id="difficulty">
+                                    <option value="">選擇難度</option>
+                                    <option value="簡單">簡單</option>
+                                    <option value="中等">中等</option>
+                                    <option value="困難">困難</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="servings">份量</label>
+                                <input type="number" id="servings" min="1" placeholder="1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>🏷️ 標籤</h3>
+                        <div class="tags-input">
+                            <input type="text" id="tagsInput" placeholder="輸入標籤後按 Enter（例如：家常、下飯）" />
+                            <div class="tags-display" id="tagsDisplay"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>🍳 食材清單</h3>
+                        <div class="ingredients-list" id="ingredientsList">
+                            <div class="ingredient-item">
+                                <input type="text" list="ingredientNameOptions" placeholder="例如：雞蛋 2 顆" />
+                                <button type="button" class="remove-btn"
+                                    onclick="app.removeIngredient(this)">移除</button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-btn" onclick="app.addIngredient()">➕ 新增食材</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>🍴 料理作法</h3>
+                        <div class="instructions-list" id="instructionsList">
+                            <div class="instruction-item">
+                                <span style="font-weight: bold; min-width: 30px;">1.</span>
+                                <input type="text" placeholder="詳細描述第一個步驟" />
+                                <button type="button" class="remove-btn"
+                                    onclick="app.removeInstruction(this)">移除</button>
+                            </div>
+                        </div>
+                        <button type="button" class="add-btn" onclick="app.addInstruction()">➕ 新增步驟</button>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>🖼️ 上傳圖片（選填）</h3>
+                        <div class="form-group">
+                            <label for="recipeImageFile">選擇圖片檔案</label>
+                            <input type="file" id="recipeImageFile" accept="image/*" />
+                            <div id="addImagePreview" style="margin-top: 12px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="app.clearForm()">清空表單</button>
+                        <button type="submit" class="btn btn-primary">💾 儲存到雲端</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 食材庫（Ingredients）管理區 -->
+        <div class="page" id="ingredientsPage">
+            <div class="toolbar-row">
+                <div class="stats" id="ingredientsStats" style="margin-bottom:0;">食材庫載入中...</div>
+                <button class="btn btn-primary ingredient-write-only" type="button" onclick="ingredientsApp.showAddForm()">➕ 新增食材</button>
+            </div>
+
+            <div class="form-section" id="ingredientFormSection" style="display:none;">
+                <h3 id="ingredientFormTitle">➕ 新增食材</h3>
+                <input type="hidden" id="ingredientId" value="" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ingredientName">名稱 *</label>
+                        <input type="text" id="ingredientName" placeholder="例如：雞胸肉" />
+                    </div>
+                    <div class="form-group">
+                        <label for="ingredientCategory">分類</label>
+                        <input type="text" id="ingredientCategory" placeholder="例如：肉類、蔬菜、辛香料、醬料" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ingredientUnit">常用單位</label>
+                        <input type="text" id="ingredientUnit" placeholder="例如：g、ml、顆、匙" />
+                    </div>
+                    <div class="form-group">
+                        <label for="ingredientAmount">常用份量</label>
+                        <input type="text" id="ingredientAmount" placeholder="例如：200g" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ingredientNotes">備註</label>
+                    <input type="text" id="ingredientNotes" placeholder="風味、替代食材、保存方式等" />
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="ingredientsApp.cancelForm()">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="ingredientsApp.save()">💾 儲存食材</button>
+                </div>
+            </div>
+
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>名稱</th>
+                            <th>分類</th>
+                            <th>常用單位</th>
+                            <th>常用份量</th>
+                            <th>備註</th>
+                            <th class="ingredient-write-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ingredientsTableBody">
+                        <tr><td colspan="6">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 供食譜表單引用的名稱建議清單 -->
+            <datalist id="ingredientNameOptions"></datalist>
+        </div>
+
+        <!-- 器具（Cookware）管理區 -->
+        <div class="page" id="cookwarePage">
+            <div class="toolbar-row">
+                <div class="stats" id="cookwareStats" style="margin-bottom:0;">器具載入中...</div>
+                <button class="btn btn-primary cookware-write-only" type="button" onclick="cookwareApp.showAddForm()">➕ 新增器具</button>
+            </div>
+
+            <div class="form-section" id="cookwareFormSection" style="display:none;">
+                <h3 id="cookwareFormTitle">➕ 新增器具</h3>
+                <input type="hidden" id="cookwareId" value="" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cookwareName">名稱 *</label>
+                        <input type="text" id="cookwareName" placeholder="例如：不沾平底鍋" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cookwareCapacity">容量 capacity(L)</label>
+                        <input type="number" id="cookwareCapacity" min="0" placeholder="例如：150" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cookwareImageFile">器具圖片（選填，建議 &lt; 40KB）</label>
+                    <input type="file" id="cookwareImageFile" accept="image/*" />
+                    <div id="cookwareImagePreview" style="margin-top:12px;"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="cookwareApp.cancelForm()">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="cookwareApp.save()">💾 儲存器具</button>
+                </div>
+            </div>
+
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>圖片</th>
+                            <th>名稱</th>
+                            <th>容量 (L)</th>
+                            <th class="cookware-write-only">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cookwareTableBody">
+                        <tr><td colspan="4">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 稽核紀錄（AuditLogs）檢視區：admin / super_admin 可見 -->
+        <div class="page" id="auditPage">
+            <div class="toolbar-row">
+                <div class="stats" id="auditStats" style="margin-bottom:0;">稽核紀錄載入中...</div>
+                <button class="btn btn-primary" type="button" onclick="auditApp.load()">🔄 重新整理</button>
+            </div>
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>使用者</th>
+                            <th>角色</th>
+                            <th>動作</th>
+                            <th>對象</th>
+                            <th>詳情</th>
+                            <th>結果</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr><td colspan="7">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 系統設定（SystemConfig）：super_admin 可見 -->
+        <div class="page" id="configPage">
+            <div class="toolbar-row">
+                <div class="stats" id="configStats" style="margin-bottom:0;">系統設定載入中...</div>
+                <button class="btn btn-primary" type="button" onclick="configApp.load()">🔄 重新整理</button>
+            </div>
+            <div class="data-table-wrap" style="padding: 8px 20px;">
+                <div id="configList">載入中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編輯抽屜 - 增強版 -->
+    <aside id="editDrawer" class="drawer hidden" aria-hidden="true">
+        <div class="drawer-header">
+            <h3>編輯食譜</h3>
+            <div class="header-actions">
+                <button id="closeDrawerX" class="btn-close" type="button" title="關閉">✕</button>
+            </div>
+        </div>
+        <form id="editForm" class="edit-form">
+            <div class="form-section">
+                <h3>📄 基本資訊</h3>
+                <div class="form-group">
+                    <label for="editTitle">料理名稱</label>
+                    <input type="text" id="editTitle" placeholder="例如：番茄炒蛋、紅燒牛肉（可留空）" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editCategory">分類</label>
+                        <select id="editCategory">
+<option value="">選擇分類</option>
+                            <option value="主菜">主菜</option>
+                            <option value="湯品">湯品</option>
+                            <option value="開胃菜">開胃菜</option>
+                            <option value="主食">主食</option>
+                            <option value="甜點">甜點</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCookwareType">器具</label>
+                        <select id="editCookwareType">
+                            <option value="">選擇器具</option>
+                            <!-- 器具選項由 Cookware 資料表動態載入 -->
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editCalories">熱量 (kcal)</label>
+                        <input type="number" id="editCalories" min="0" placeholder="例如：450" />
+                    </div>
+                    <div class="form-group">
+                        <label for="editCookTime">烹調時間</label>
+                        <input type="text" id="editCookTime" placeholder="例如：30 分鐘" />
+                    </div>
+                    <div class="form-group">
+                        <label for="editDifficulty">難度等級</label>
+                        <select id="editDifficulty">
+                            <option value="">選擇難度</option>
+                            <option value="簡單">簡單</option>
+                            <option value="中等">中等</option>
+                            <option value="困難">困難</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editServings">份量</label>
+                        <input type="number" id="editServings" min="1" placeholder="1" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>🏷️ 標籤</h3>
+                <div class="tags-input">
+                    <input type="text" id="editTagsInput" placeholder="輸入標籤後按 Enter（例如：家常、下飯）" />
+                    <div class="tags-display" id="editTagsDisplay"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>🍳 食材清單</h3>
+                <div class="ingredients-list" id="editIngredientsList"></div>
+                <button type="button" class="add-btn" onclick="app.addEditIngredient()">➕ 新增食材</button>
+            </div>
+
+            <div class="form-section">
+                <h3>🍴 料理作法</h3>
+                <div class="instructions-list" id="editInstructionsList"></div>
+                <button type="button" class="add-btn" onclick="app.addEditInstruction()">➕ 新增步驟</button>
+            </div>
+
+            <div class="form-section">
+                <h3>🖼️ 更換圖片（選填）</h3>
+                <div class="form-group">
+                    <label for="imageFile">選擇圖片檔案</label>
+                    <input id="imageFile" name="image_file" type="file" accept="image/*">
+                    <div id="imagePreview" style="margin-top:12px;"></div>
+                </div>
+            </div>
+
+            <div class="drawer-actions">
+                <button id="saveRecipe" class="btn btn-primary" type="button">💾 儲存</button>
+                <button id="cancelEdit" class="btn btn-secondary" type="button">🚫 取消</button>
+                <button id="deleteRecipe" class="btn btn-danger" type="button">🗑️ 刪除</button>
+            </div>
+        </form>
+    </aside>
+
+    <script>
+        // ===== 正規化工具（避免舊資料型別造成 .split 錯誤） =====
+        // 與 Code.gs 的 COCKTAIL_COLS 完全對齊（含 ingredients 單一字串欄位）
+        const COLS = ['id', 'title', 'category', 'tags', 'ingredients', 'instructions', 'cookware', 'calories', 'cook_time', 'difficulty', 'servings', 'image_b64'];
+
+        // 前端權限回退表：僅在後端登入回應未帶 permissions 時使用（需與 Code.gs 的 ROLE_PERMISSIONS 保持一致）。
+        // 正常情況下前端會直接採用後端回傳的 user.permissions，此表只是相容用的後備。
+        const ROLE_PERMISSIONS_FALLBACK = {
+            super_admin: ['view_data', 'write_recipe', 'write_ingredient', 'write_cookware', 'view_audit', 'manage_config'],
+            admin: ['view_data', 'write_recipe', 'write_ingredient', 'write_cookware', 'view_audit'],
+            editor: ['view_data', 'write_recipe'],
+            user: ['view_data']
+        };
+        function normalizeText(v) { if (Array.isArray(v)) return v.join('+'); if (v == null) return ''; return String(v); }
+        function normalizeRecord(c = {}) { const out = {}; for (const k of COLS) out[k] = normalizeText(c[k]); return out; }
+
+        // ===== IndexedDB：圖片與資料快取 =====
+        class MobileStorageManager {
+            constructor() { this.dbName = 'RecipeDB'; this.dbVersion = 3; this.db = null; this.imageStore = 'images'; this.recipeStore = 'recipes'; }
+            async init() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onerror = () => reject(req.error); req.onsuccess = () => { this.db = req.result; resolve(this.db); }; req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.recipeStore)) { const s = db.createObjectStore(this.recipeStore, { keyPath: 'id' }); s.createIndex('title', 'title', { unique: false }); s.createIndex('category', 'category', { unique: false }); s.createIndex('tags', 'tags', { unique: false }); } if (!db.objectStoreNames.contains(this.imageStore)) { db.createObjectStore(this.imageStore, { keyPath: 'id' }); } }; }); }
+            async saveRecipe(c) { return new Promise((res, rej) => { const tx = this.db.transaction(['recipes'], 'readwrite'); const st = tx.objectStore('recipes'); const r = st.put(c); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+            async getAllRecipes() { return new Promise((res, rej) => { const tx = this.db.transaction(['recipes'], 'readonly'); const st = tx.objectStore('recipes'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); }
+            async deleteRecipe(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['recipes'], 'readwrite'); const st = tx.objectStore('recipes'); const r = st.delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+            async clearAllData() { return new Promise((res, rej) => { const tx = this.db.transaction(['recipes', 'images'], 'readwrite'); const a = tx.objectStore('recipes').clear(); const b = tx.objectStore('images').clear(); let ok = 0; a.onsuccess = () => { ok++; if (ok === 2) res(); }; b.onsuccess = () => { ok++; if (ok === 2) res(); }; a.onerror = b.onerror = (e) => rej(e.target.error); }); }
+            async saveImage(file, id) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => { const imageData = { id, data: reader.result, type: file.type, name: file.name, size: file.size, timestamp: Date.now() }; const tx = this.db.transaction(['images'], 'readwrite'); const st = tx.objectStore('images'); const r = st.put(imageData); r.onsuccess = () => resolve({ id, dataUrl: reader.result }); r.onerror = () => reject(r.error); }; reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
+            async getImage(id) { return new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.get(id); r.onsuccess = () => res(r.result ? r.result.data : null); r.onerror = () => rej(r.error); }); }
+            async getStorageStats() { const recipes = await this.getAllRecipes(); const imgs = await new Promise((res, rej) => { const tx = this.db.transaction(['images'], 'readonly'); const st = tx.objectStore('images'); const r = st.getAll(); r.onsuccess = () => res(r.result || []); r.onerror = () => rej(r.error); }); const totalImageSize = imgs.reduce((s, i) => s + (i.size || 0), 0); return { recipeCount: recipes.length, imageCount: imgs.length, totalImageSize, formattedImageSize: this.formatBytes(totalImageSize) }; }
+            formatBytes(bytes, decimals = 2) { if (bytes === 0) return '0 Bytes'; const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]; }
+        }
+
+        // ===== GAS 客戶端（增強版，支援管理員認證 + token 自動換發） =====
+        const gas = {
+            config: {
+                timeoutGet: 20000,
+                timeoutPost: 35000,
+                maxRetries: 2,
+                retryBaseDelay: 700
+            },
+
+            _listInflight: null,
+            _refreshInflight: null, // access token 換發併發去重
+
+            // API 網址：優先使用頁面注入的 __API_URL__；否則退回 localStorage（手動指定用）
+            get url() { return window.__API_URL__ || localStorage.getItem('gasUrl') || ''; },
+            set url(v) { localStorage.setItem('gasUrl', this._clean(v)); },
+
+            _clean(v) {
+                let s = (v || '')
+                    .replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF\u00A0]/g, '')
+                    .replace(/\s+/g, '')
+                    .trim()
+                    .replace(/\/+$/, '');
+                if (!s) return '';
+                if (/^http:\/\//i.test(s)) s = s.replace(/^http:\/\//i, 'https://');
+                if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+                return s;
+            },
+
+            _isValidUrl(url) {
+                try {
+                    const u = new URL(url);
+                    if (u.protocol !== 'https:') return false;
+                    const host = u.hostname.toLowerCase();
+                    if (host !== 'script.google.com' && host !== 'script.googleusercontent.com') return false;
+                    return /\/exec$/.test(u.pathname);
+                } catch (e) { return false; }
+            },
+
+            logDebug(message, data = null) {
+                const timestamp = new Date().toLocaleTimeString();
+                console.log(`[${timestamp}] [GAS] ${message}`, data || '');
+            },
+
+            showConnectionStatus(message, type = 'info') {
+                const status = document.getElementById('connectionStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.className = `connection-status ${type}`;
+                    status.classList.remove('hidden');
+                    if (type !== 'error') {
+                        setTimeout(() => { if (status.classList.contains(type)) status.classList.add('hidden'); }, 5000);
+                    }
+                }
+                this.logDebug(`狀態更新 [${type}]`, message);
+            },
+
+            _sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
+
+            _resolveUrl() {
+                const url = this._clean(this.url);
+                if (!url) throw new Error('尚未設定 GAS Web App URL，請到「設定」貼上 /exec 連結');
+                if (!this._isValidUrl(url)) throw new Error('網址無法辨識。請貼上「部署為網頁應用程式」後、以 /exec 結尾的連結（個人版或 Workspace 皆可）');
+                return url;
+            },
+
+            async validateUrl(url) {
+                const target = this._clean(url);
+                if (!target) return { valid: false, error: '未設定 URL' };
+                return this._isValidUrl(target) ? { valid: true, url: target } : { valid: false, error: '網址無法辨識，請貼上以 /exec 結尾的 Web App 連結（個人版或 Workspace 皆可）' };
+            },
+
+            _isRetriable(err, httpStatus) {
+                if (httpStatus && [429, 500, 502, 503, 504].includes(httpStatus)) return true;
+                if (!err) return false;
+                if (err.name === 'AbortError') return true;
+                if (err.name === 'TypeError') return true;
+                if (/Failed to fetch|NetworkError|network/i.test(err.message || '')) return true;
+                return false;
+            },
+
+            _friendlyError(err) {
+                const msg = err && err.message ? err.message : String(err);
+                if (err && err.name === 'AbortError') return '連線逾時，請檢查網路或稍後再試';
+                if (/Failed to fetch|NetworkError/i.test(msg)) return '無法連線到 Google Apps Script，請確認網路與 URL 是否正確';
+                if (/CORS/i.test(msg)) return 'CORS 設定問題，請確認 Web App「誰可以存取」設為「任何人」並重新部署';
+                return msg;
+            },
+
+            async _request(opts = {}) {
+                const baseUrl = this._resolveUrl();
+                const isPost = opts.method === 'POST';
+                const timeout = opts.timeout || (isPost ? this.config.timeoutPost : this.config.timeoutGet);
+                const maxRetries = (opts.retries != null) ? opts.retries : this.config.maxRetries;
+                const label = opts.label || (isPost ? '寫入' : '讀取');
+
+                let target = baseUrl;
+                const qs = new URLSearchParams(opts.query || {});
+                qs.set('_t', Date.now().toString());
+                if (!isPost) target = `${baseUrl}?${qs.toString()}`;
+
+                let lastErr = null;
+
+                for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                    if (attempt > 0) {
+                        const delay = Math.round(this.config.retryBaseDelay * Math.pow(2, attempt - 1) + Math.random() * 300);
+                        this.showConnectionStatus(`⏳ ${label}重試中（第 ${attempt}/${maxRetries} 次）…`, 'warning');
+                        await this._sleep(delay);
+                    }
+
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), timeout);
+
+                    try {
+                        const fetchOpts = { method: opts.method || 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal };
+                        if (isPost) {
+                            fetchOpts.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
+                            fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body || {});
+                        }
+
+                        const response = await fetch(target, fetchOpts);
+                        clearTimeout(timer);
+
+                        if (!response.ok) {
+                            const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+                            if (this._isRetriable(null, response.status) && attempt < maxRetries) { lastErr = err; continue; }
+                            throw err;
+                        }
+
+                        const text = (await response.text() || '').trim();
+                        if (!text) throw new Error('伺服器回應為空（可能部署未生效，請重新部署）');
+                        if (text[0] === '<') throw new Error('伺服器回應為網頁而非資料，請確認 Web App「執行身分＝我」「誰可以存取＝任何人」，並使用最新部署的 /exec 連結');
+
+                        let json;
+                        try { json = JSON.parse(text); }
+                        catch (e) { throw new Error('伺服器回應非有效 JSON：' + text.slice(0, 100)); }
+
+                        return json;
+
+                    } catch (err) {
+                        clearTimeout(timer);
+                        lastErr = err;
+                        const retriable = this._isRetriable(err);
+                        if (retriable && attempt < maxRetries) continue;
+                        break;
+                    }
+                }
+
+                throw new Error(this._friendlyError(lastErr));
+            },
+
+            // 帶自動 401（token 過期）重試一次的包裝：先嘗試 refresh_token，再重打原請求
+            async _authedRequest(opts) {
+                let json = await this._request(opts);
+                const looksUnauthorized = json && json.ok === false && /未授權|token 已過期|token 簽章不符|token 格式錯誤/.test(json.error || '');
+                if (looksUnauthorized && adminAuth.refreshToken) {
+                    const refreshed = await adminAuth.tryRefreshAccessToken();
+                    if (refreshed && opts.body && typeof opts.body === 'object') {
+                        opts.body = { ...opts.body, token: adminAuth.adminToken };
+                        json = await this._request(opts);
+                    }
+                }
+                return json;
+            },
+
+            // 需登入的 GET 讀取：自動帶上 access token，遇到未授權時嘗試以 refresh token 換新後重試一次。
+            async _authedGet(action, label) {
+                const doReq = () => this._request({ method: 'GET', query: { action, token: adminAuth.adminToken || '' }, label });
+                let json = await doReq();
+                const looksUnauthorized = json && json.ok === false && /未授權|token 已過期|token 簽章不符|token 格式錯誤|view_data/.test(json.error || '');
+                if (looksUnauthorized && adminAuth.refreshToken) {
+                    const refreshed = await adminAuth.tryRefreshAccessToken();
+                    if (refreshed) json = await doReq();
+                }
+                return json;
+            },
+
+            async test() {
+                try {
+                    this.showConnectionStatus('正在測試連線…', 'info');
+                    const json = await this._request({ method: 'GET', query: { action: 'test' }, label: '連線測試', timeout: 15000 });
+                    if (json.ok === true) { this.showConnectionStatus('✅ 連線測試成功', 'success'); return true; }
+                    this.showConnectionStatus('⌫ 測試失敗：' + (json.error || '伺服器回報未成功'), 'error');
+                    return false;
+                } catch (error) { this.showConnectionStatus('⌫ ' + error.message, 'error'); return false; }
+            },
+
+            async list() {
+                if (this._listInflight) return this._listInflight;
+                this._listInflight = (async () => {
+                    this.showConnectionStatus('正在從雲端讀取資料…', 'info');
+                    const json = await this._authedGet('list', '讀取清單');
+                    if (!json.ok) throw new Error(json.error || 'list 操作失敗');
+                    const data = json.data || [];
+                    this.showConnectionStatus(`✅ 已讀取 ${data.length} 筆資料`, 'success');
+                    return data;
+                })();
+                try { return await this._listInflight; }
+                catch (error) { this.showConnectionStatus('⌫ ' + error.message, 'error'); throw error; }
+                finally { this._listInflight = null; }
+            },
+
+            async upsert(data, token) {
+                this.showConnectionStatus('正在儲存到雲端…', 'info');
+                try {
+                    const body = { action: 'upsert', data }; if (token) body.token = token;
+                    const json = await this._authedRequest({ method: 'POST', body, label: '儲存' });
+                    if (!json.ok) throw new Error(json.error || 'upsert 操作失敗');
+                    this.showConnectionStatus('✅ 儲存成功', 'success');
+                    return json.id;
+                } catch (error) { this.showConnectionStatus('⌫ 儲存失敗：' + error.message, 'error'); throw error; }
+            },
+
+            async remove(id, token) {
+                this.showConnectionStatus('正在刪除…', 'info');
+                try {
+                    const body = { action: 'delete', id }; if (token) body.token = token;
+                    const json = await this._authedRequest({ method: 'POST', body, label: '刪除' });
+                    if (!json.ok) throw new Error(json.error || 'delete 操作失敗');
+                    this.showConnectionStatus('✅ 刪除成功', 'success');
+                    return true;
+                } catch (error) { this.showConnectionStatus('⌫ 刪除失敗：' + error.message, 'error'); throw error; }
+            },
+
+            async adminLogin(username, password) {
+                const json = await this._request({
+                    method: 'POST',
+                    body: { action: 'admin_login', username, password, userAgent: navigator.userAgent },
+                    label: '管理員登入', retries: 0
+                });
+                if (!json.ok) throw new Error(json.error || '登入請求失敗');
+                return json.data;
+            },
+
+            async userLogin(username, password) {
+                const json = await this._request({ method: 'POST', body: { action: 'login', username, password, userAgent: navigator.userAgent }, label: '登入', retries: 0 });
+                if (!json.ok) throw new Error(json.error || '登入請求失敗');
+                return json.data;
+            },
+
+            async signup(username, password) {
+                const json = await this._request({ method: 'POST', body: { action: 'signup', username, password, userAgent: navigator.userAgent }, label: '註冊', retries: 0 });
+                if (!json.ok) throw new Error(json.error || '註冊請求失敗');
+                return json.data;
+            },
+
+            async refreshAccessToken(refreshToken) {
+                if (this._refreshInflight) return this._refreshInflight;
+                this._refreshInflight = (async () => {
+                    const json = await this._request({ method: 'POST', body: { action: 'refresh_token', refreshToken }, label: '換發 token', retries: 0 });
+                    if (!json.ok) throw new Error(json.error || 'refresh_token 失敗');
+                    return json.data;
+                })();
+                try { return await this._refreshInflight; } finally { this._refreshInflight = null; }
+            },
+
+            async logout(refreshToken, accessToken) {
+                try {
+                    await this._request({ method: 'POST', body: { action: 'admin_logout', refreshToken, token: accessToken }, label: '登出', retries: 0 });
+                } catch (e) { console.warn('伺服器登出請求失敗（將僅清除本機狀態）：', e); }
+            },
+
+            // ===== 食材庫（Ingredients）=====
+            async listIngredients() {
+                const json = await this._authedGet('list_ingredients', '讀取食材庫');
+                if (!json.ok) throw new Error(json.error || 'list_ingredients 失敗');
+                return json.data || [];
+            },
+            async upsertIngredient(data, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'upsert_ingredient', data, token }, label: '儲存食材' });
+                if (!json.ok) throw new Error(json.error || 'upsert_ingredient 失敗');
+                return json.id;
+            },
+            async deleteIngredient(id, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'delete_ingredient', id, token }, label: '刪除食材' });
+                if (!json.ok) throw new Error(json.error || 'delete_ingredient 失敗');
+                return true;
+            },
+
+            // ===== 器具（Cookware）=====
+            async listCookware() {
+                const json = await this._authedGet('list_cookware', '讀取器具');
+                if (!json.ok) throw new Error(json.error || 'list_cookware 失敗');
+                return json.data || [];
+            },
+            async upsertCookware(data, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'upsert_cookware', data, token }, label: '儲存器具' });
+                if (!json.ok) throw new Error(json.error || 'upsert_cookware 失敗');
+                return json.id;
+            },
+            async deleteCookware(id, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'delete_cookware', id, token }, label: '刪除器具' });
+                if (!json.ok) throw new Error(json.error || 'delete_cookware 失敗');
+                return true;
+            },
+
+            // ===== 稽核紀錄 =====
+            async getAuditLogs(token, limit = 50) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'get_audit_logs', token, limit }, label: '讀取稽核紀錄' });
+                if (!json.ok) throw new Error(json.error || 'get_audit_logs 失敗');
+                return json.data || [];
+            },
+
+            // ===== 系統設定 =====
+            async getConfig(token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'get_config', token }, label: '讀取系統設定' });
+                if (!json.ok) throw new Error(json.error || 'get_config 失敗');
+                return json.data || {};
+            },
+            async setConfig(key, value, token) {
+                const json = await this._authedRequest({ method: 'POST', body: { action: 'set_config', key, value, token }, label: '更新系統設定' });
+                if (!json.ok) throw new Error(json.error || 'set_config 失敗');
+                return true;
+            }
+        };
+
+        // ===== 管理員認證系統（access token + refresh token）=====
+        const adminAuth = {
+            isAdmin: false,
+            adminUser: null,
+            adminToken: null,     // access token
+            refreshToken: null,   // refresh token（長效、可撤銷）
+            _refreshTimer: null,
+
+            init() {
+                this.loadAdminStatus();
+                this.bindEvents();
+                this.updateUI();
+                this._scheduleProactiveRefresh();
+            },
+
+            bindEvents() {
+                document.getElementById('adminLoginBtn').addEventListener('click', () => this.showLoginModal());
+                document.getElementById('adminLogoutBtn').addEventListener('click', () => this.logout());
+                document.getElementById('adminLoginForm').addEventListener('submit', (e) => this.handleLogin(e));
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('adminLoginModal').classList.contains('show')) this.hideLoginModal(); });
+                document.getElementById('adminLoginModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) this.hideLoginModal(); });
+                // 全站登入閘門
+                const gateForm = document.getElementById('authGateForm');
+                if (gateForm) gateForm.addEventListener('submit', (e) => this.handleLogin(e));
+            },
+
+            loadAdminStatus() {
+                try {
+                    const savedAuth = localStorage.getItem('adminAuth');
+                    if (savedAuth) {
+                        const authData = JSON.parse(savedAuth);
+                        this.isAdmin = true;
+                        this.adminUser = authData.user;
+                        this.adminToken = authData.accessToken;
+                        this.refreshToken = authData.refreshToken;
+                    }
+                } catch (e) {
+                    console.warn('載入管理員狀態失敗:', e);
+                    localStorage.removeItem('adminAuth');
+                }
+            },
+
+            saveAdminStatus() {
+                if (this.isAdmin && this.adminUser && this.adminToken) {
+                    localStorage.setItem('adminAuth', JSON.stringify({
+                        user: this.adminUser, accessToken: this.adminToken, refreshToken: this.refreshToken, timestamp: Date.now()
+                    }));
+                } else {
+                    localStorage.removeItem('adminAuth');
+                }
+            },
+
+            // 每 45 分鐘嘗試主動換發一次 access token（伺服器預設 60 分鐘過期）
+            _scheduleProactiveRefresh() {
+                if (this._refreshTimer) clearInterval(this._refreshTimer);
+                this._refreshTimer = setInterval(() => {
+                    if (this.isAdmin && this.refreshToken) this.tryRefreshAccessToken();
+                }, 45 * 60 * 1000);
+            },
+
+            async tryRefreshAccessToken() {
+                if (!this.refreshToken) return false;
+                try {
+                    const data = await gas.refreshAccessToken(this.refreshToken);
+                    this.adminToken = data.accessToken;
+                    this.saveAdminStatus();
+                    return true;
+                } catch (e) {
+                    console.warn('換發 access token 失敗，需重新登入：', e.message);
+                    this.isAdmin = false; this.adminUser = null; this.adminToken = null; this.refreshToken = null;
+                    this.saveAdminStatus();
+                    this.updateUI();
+                    gas.showConnectionStatus('⚠️ 登入狀態已過期，請重新登入', 'warning');
+                    return false;
+                }
+            },
+
+            showLoginModal() {
+                document.getElementById('adminLoginModal').classList.add('show');
+                document.getElementById('adminUsername').focus();
+                this.clearMessages();
+            },
+
+            hideLoginModal() {
+                document.getElementById('adminLoginModal').classList.remove('show');
+                document.getElementById('adminLoginForm').reset();
+                this.clearMessages();
+            },
+
+            async handleLogin(e) {
+                e.preventDefault();
+                // 支援兩個來源：登入閘門（authGate）或頂部的登入彈窗（adminLoginModal）
+                const uEl = document.getElementById('authGateUsername') || document.getElementById('adminUsername');
+                const pEl = document.getElementById('authGatePassword') || document.getElementById('adminPassword');
+                const username = (uEl && uEl.value.trim()) || '';
+                const password = (pEl && pEl.value) || '';
+                if (!username || !password) { this.showError('請輸入用戶名和密碼'); return; }
+
+                try {
+                    this.showMessage('正在驗證...', 'info');
+                    // 使用一般登入 API（login）：任何啟用中的帳號都能登入（含 user 角色），
+                    // 能做什麼由該帳號的角色權限決定。
+                    const response = await gas.userLogin(username, password);
+                    if (response.success) {
+                        this.isAdmin = true;                 // 這裡的 isAdmin 代表「已登入」
+                        this.adminUser = response.user;
+                        this.adminToken = response.accessToken || response.token;
+                        this.refreshToken = response.refreshToken;
+                        this.saveAdminStatus();
+                        this.updateUI();
+                        this.showSuccess('登入成功！');
+                        this.clearGateInputs();
+                        setTimeout(() => { this.hideLoginModal(); }, 800);
+                        // 登入後才載入資料（未登入完全拿不到）
+                        if (window.app) window.app.onLoggedIn();
+                    } else {
+                        this.showError(response.error || '登入失敗');
+                    }
+                } catch (error) {
+                    console.error('登入錯誤:', error);
+                    this.showError('登入失敗: ' + error.message);
+                }
+            },
+
+            clearGateInputs() {
+                ['authGateUsername', 'authGatePassword', 'adminUsername', 'adminPassword'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+            },
+
+            async logout() {
+                if (!confirm('確定要登出嗎？')) return;
+                await gas.logout(this.refreshToken, this.adminToken);
+                this.isAdmin = false; this.adminUser = null; this.adminToken = null; this.refreshToken = null;
+                localStorage.removeItem('adminAuth');
+                this.updateUI();
+                if (window.app) window.app.onLoggedOut();
+                gas.showConnectionStatus('✅ 已登出', 'success');
+            },
+
+            currentRole() { return (this.adminUser && this.adminUser.role) ? String(this.adminUser.role).toLowerCase() : ''; },
+
+            // 目前登入者的權限清單（由後端登入回應提供）。
+            // 若後端未回傳（相容舊資料），前端以本地對照表回退推導。
+            currentPermissions() {
+                if (this.adminUser && Array.isArray(this.adminUser.permissions)) return this.adminUser.permissions;
+                return ROLE_PERMISSIONS_FALLBACK[this.currentRole()] || [];
+            },
+
+            hasPermission(permission) {
+                return this.isAdmin && this.currentPermissions().indexOf(permission) >= 0;
+            },
+
+            updateUI() {
+                const statusEl = document.getElementById('adminControls');
+                const statusTextEl = document.getElementById('adminStatusText');
+                const loginBtn = document.getElementById('adminLoginBtn');
+                const logoutBtn = document.getElementById('adminLogoutBtn');
+
+                if (this.isAdmin) {
+                    statusEl.className = 'admin-controls admin-mode';
+                    statusTextEl.textContent = `${this.adminUser?.username || '使用者'}（${this.currentRole()}）`;
+                    loginBtn.style.display = 'none';
+                    logoutBtn.style.display = 'block';
+                    document.body.classList.add('admin-mode');
+                    document.body.classList.remove('guest-mode');
+                    document.body.classList.remove('logged-out'); // 顯示 App、隱藏登入閘門
+                } else {
+                    statusEl.className = 'admin-controls guest-mode';
+                    statusTextEl.textContent = '未登入';
+                    loginBtn.style.display = 'block';
+                    logoutBtn.style.display = 'none';
+                    document.body.classList.add('guest-mode');
+                    document.body.classList.remove('admin-mode');
+                    document.body.classList.add('logged-out');    // 隱藏 App、顯示登入閘門
+                }
+
+                // 依權限切換 body class，供 CSS 精細控制各種寫入元件的顯示
+                document.body.classList.toggle('can-write-recipe', this.hasPermission('write_recipe'));
+                document.body.classList.toggle('can-write-ingredient', this.hasPermission('write_ingredient'));
+                document.body.classList.toggle('can-write-cookware', this.hasPermission('write_cookware'));
+
+                this.updateEditButtons();
+                this.updateRoleGatedNav();
+            },
+
+            // 根據權限顯示/隱藏 data-perm 指定的導覽分頁（add=write_recipe, audit=view_audit, config=manage_config）
+            updateRoleGatedNav() {
+                document.querySelectorAll('.nav-btn[data-perm]').forEach(btn => {
+                    const perm = btn.dataset.perm;
+                    btn.classList.toggle('role-hidden', !this.hasPermission(perm));
+                });
+            },
+
+            updateEditButtons() {
+                // 卡片編輯鈕、刪除鈕的顯示由 CSS（can-write-recipe）控制；
+                // 這裡只針對「新增食譜」分頁鈕依 write_recipe 權限啟用/停用。
+                const addButton = document.querySelector('[data-page="add"]');
+                if (addButton) {
+                    if (this.hasPermission('write_recipe')) { addButton.classList.remove('edit-disabled'); addButton.removeAttribute('disabled'); addButton.title = ''; }
+                    else { addButton.classList.add('edit-disabled'); addButton.setAttribute('disabled', 'disabled'); addButton.title = '需要 write_recipe 權限'; }
+                }
+            },
+
+            // operation：顯示用的動作名稱；requiredPerm：需要的權限鍵（可省略，省略時只檢查是否登入）
+            checkPermission(operation = '編輯', requiredPerm = null) {
+                if (!this.isAdmin) { alert(`⚠️ ${operation}功能需要登入\n\n請先登入帳號`); this.showLoginModal(); return false; }
+                if (requiredPerm && !this.hasPermission(requiredPerm)) {
+                    alert(`⚠️ ${operation}功能需要「${requiredPerm}」權限\n\n你目前的角色（${this.currentRole() || '未知'}）沒有此權限`);
+                    return false;
+                }
+                return true;
+            },
+
+            showError(message) { this.showMessage(message, 'error'); },
+            showSuccess(message) { this.showMessage(message, 'success'); },
+            showMessage(message, type) {
+                this.clearMessages();
+                // 依目前是否在「登入閘門」決定訊息顯示位置
+                const usingGate = document.body.classList.contains('logged-out');
+                const errorEl = document.getElementById(usingGate ? 'authGateError' : 'adminLoginError');
+                const successEl = document.getElementById(usingGate ? 'authGateSuccess' : 'adminLoginSuccess');
+                if (!errorEl || !successEl) return;
+                if (type === 'error') { errorEl.textContent = message; errorEl.style.display = 'block'; }
+                else { successEl.textContent = message; successEl.style.display = 'block'; }
+            },
+            clearMessages() {
+                ['adminLoginError', 'adminLoginSuccess', 'authGateError', 'authGateSuccess'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.style.display = 'none';
+                });
+            }
+        };
+
+        // ===== 食材庫（Ingredients）管理模組 =====
+        const ingredientsApp = {
+            items: [],
+            async load() {
+                try {
+                    this.items = await gas.listIngredients();
+                    this.render();
+                    this.renderDatalist();
+                } catch (e) {
+                    document.getElementById('ingredientsTableBody').innerHTML = `<tr><td colspan="6">讀取失敗：${e.message}</td></tr>`;
+                }
+            },
+            render() {
+                const stats = document.getElementById('ingredientsStats');
+                stats.textContent = `共 ${this.items.length} 項食材`;
+                const body = document.getElementById('ingredientsTableBody');
+                if (!this.items.length) { body.innerHTML = `<tr><td colspan="6">尚無食材資料</td></tr>`; return; }
+                body.innerHTML = this.items.map(it => `
+                    <tr>
+                        <td>${it.name || ''}</td>
+                        <td>${it.category || ''}</td>
+                        <td>${it.default_unit || ''}</td>
+                        <td>${it.common_amount || ''}</td>
+                        <td>${it.notes || ''}</td>
+                        <td class="ingredient-write-only">
+                            <button class="btn btn-secondary" style="padding:6px 10px;font-size:.8rem;" onclick="ingredientsApp.edit('${it.id}')">編輯</button>
+                            <button class="btn btn-danger" style="padding:6px 10px;font-size:.8rem;" onclick="ingredientsApp.remove('${it.id}')">刪除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+            renderDatalist() {
+                const dl = document.getElementById('ingredientNameOptions');
+                if (!dl) return;
+                dl.innerHTML = this.items.map(it => `<option value="${(it.name || '').replace(/"/g, '&quot;')}"></option>`).join('');
+            },
+            showAddForm() {
+                if (!adminAuth.checkPermission('新增食材', 'write_ingredient')) return;
+                document.getElementById('ingredientFormTitle').textContent = '➕ 新增食材';
+                document.getElementById('ingredientId').value = '';
+                document.getElementById('ingredientName').value = '';
+                document.getElementById('ingredientCategory').value = '';
+                document.getElementById('ingredientUnit').value = '';
+                document.getElementById('ingredientAmount').value = '';
+                document.getElementById('ingredientNotes').value = '';
+                document.getElementById('ingredientFormSection').style.display = 'block';
+            },
+            edit(id) {
+                if (!adminAuth.checkPermission('編輯食材', 'write_ingredient')) return;
+                const it = this.items.find(x => x.id === id);
+                if (!it) return;
+                document.getElementById('ingredientFormTitle').textContent = '✏️ 編輯食材';
+                document.getElementById('ingredientId').value = it.id;
+                document.getElementById('ingredientName').value = it.name || '';
+                document.getElementById('ingredientCategory').value = it.category || '';
+                document.getElementById('ingredientUnit').value = it.default_unit || '';
+                document.getElementById('ingredientAmount').value = it.common_amount || '';
+                document.getElementById('ingredientNotes').value = it.notes || '';
+                document.getElementById('ingredientFormSection').style.display = 'block';
+                document.getElementById('ingredientFormSection').scrollIntoView({ behavior: 'smooth' });
+            },
+            cancelForm() { document.getElementById('ingredientFormSection').style.display = 'none'; },
+            async save() {
+                if (!adminAuth.checkPermission('儲存食材', 'write_ingredient')) return;
+                const name = document.getElementById('ingredientName').value.trim();
+                if (!name) { alert('請輸入食材名稱'); return; }
+                const data = {
+                    id: document.getElementById('ingredientId').value.trim(),
+                    name,
+                    category: document.getElementById('ingredientCategory').value.trim(),
+                    default_unit: document.getElementById('ingredientUnit').value.trim(),
+                    common_amount: document.getElementById('ingredientAmount').value.trim(),
+                    notes: document.getElementById('ingredientNotes').value.trim()
+                };
+                try {
+                    await gas.upsertIngredient(data, adminAuth.adminToken);
+                    this.cancelForm();
+                    await this.load();
+                    gas.showConnectionStatus('✅ 食材已儲存', 'success');
+                } catch (e) {
+                    alert('儲存失敗：' + e.message);
+                }
+            },
+            async remove(id) {
+                if (!adminAuth.checkPermission('刪除食材', 'write_ingredient')) return;
+                if (!confirm('確定要刪除這項食材嗎？')) return;
+                try {
+                    await gas.deleteIngredient(id, adminAuth.adminToken);
+                    await this.load();
+                    gas.showConnectionStatus('✅ 食材已刪除', 'success');
+                } catch (e) {
+                    alert('刪除失敗：' + e.message);
+                }
+            }
+        };
+
+        // ===== 器具（Cookware）管理模組 =====
+        const cookwareApp = {
+            items: [],
+            _pendingImageB64: null,   // 新選擇但尚未儲存的圖片（dataURL）
+            _keepExistingImage: '',   // 編輯時沿用的既有圖片
+
+            async load() {
+                try {
+                    this.items = await gas.listCookware();
+                    this.render();
+                    // 器具清單同時用來填充食譜表單的器具下拉選單
+                    if (window.app) window.app.populateCookwareSelects(this.items);
+                } catch (e) {
+                    document.getElementById('cookwareTableBody').innerHTML = `<tr><td colspan="4">讀取失敗：${e.message}</td></tr>`;
+                }
+            },
+            render() {
+                const stats = document.getElementById('cookwareStats');
+                stats.textContent = `共 ${this.items.length} 種器具`;
+                const body = document.getElementById('cookwareTableBody');
+                if (!this.items.length) { body.innerHTML = `<tr><td colspan="4">尚無器具資料</td></tr>`; return; }
+                body.innerHTML = this.items.map(g => {
+                    const cap = g['capacity(L)'] || '';
+                    const img = g.image_b64
+                        ? `<img src="${g.image_b64}" alt="${g.name || ''}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">`
+                        : '🍳';
+                    return `
+                    <tr>
+                        <td>${img}</td>
+                        <td>${g.name || ''}</td>
+                        <td>${cap ? cap + ' L' : ''}</td>
+                        <td class="cookware-write-only">
+                            <button class="btn btn-secondary" style="padding:6px 10px;font-size:.8rem;" onclick="cookwareApp.edit('${g.id}')">編輯</button>
+                            <button class="btn btn-danger" style="padding:6px 10px;font-size:.8rem;" onclick="cookwareApp.remove('${g.id}')">刪除</button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            },
+            _resetForm() {
+                document.getElementById('cookwareId').value = '';
+                document.getElementById('cookwareName').value = '';
+                document.getElementById('cookwareCapacity').value = '';
+                document.getElementById('cookwareImageFile').value = '';
+                document.getElementById('cookwareImagePreview').innerHTML = '';
+                this._pendingImageB64 = null;
+                this._keepExistingImage = '';
+            },
+            showAddForm() {
+                if (!adminAuth.checkPermission('新增器具', 'write_cookware')) return;
+                this._resetForm();
+                document.getElementById('cookwareFormTitle').textContent = '➕ 新增器具';
+                document.getElementById('cookwareFormSection').style.display = 'block';
+            },
+            edit(id) {
+                if (!adminAuth.checkPermission('編輯器具', 'write_cookware')) return;
+                const g = this.items.find(x => x.id === id);
+                if (!g) return;
+                this._resetForm();
+                document.getElementById('cookwareFormTitle').textContent = '✏️ 編輯器具';
+                document.getElementById('cookwareId').value = g.id;
+                document.getElementById('cookwareName').value = g.name || '';
+                document.getElementById('cookwareCapacity').value = g['capacity(L)'] || '';
+                this._keepExistingImage = g.image_b64 || '';
+                const preview = document.getElementById('cookwareImagePreview');
+                if (g.image_b64) {
+                    preview.innerHTML = `<img src="${g.image_b64}" style="max-width:120px;border-radius:8px;"><div style="font-size:.8rem;color:var(--card-muted);margin-top:4px;">目前的圖片</div>`;
+                }
+                document.getElementById('cookwareFormSection').style.display = 'block';
+                document.getElementById('cookwareFormSection').scrollIntoView({ behavior: 'smooth' });
+            },
+            cancelForm() {
+                document.getElementById('cookwareFormSection').style.display = 'none';
+                this._resetForm();
+            },
+            // 綁定圖片選擇 → 轉為 dataURL 預覽並暫存
+            bindImageInput() {
+                const input = document.getElementById('cookwareImageFile');
+                if (!input) return;
+                input.addEventListener('change', (e) => {
+                    const preview = document.getElementById('cookwareImagePreview');
+                    preview.innerHTML = '';
+                    this._pendingImageB64 = null;
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 45000) {
+                        gas.showConnectionStatus('⚠️ 圖片較大（' + Math.round(file.size / 1024) + 'KB），Google Sheet 單格上限約 50KB，可能無法儲存，建議壓縮', 'warning');
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        this._pendingImageB64 = reader.result;
+                        const img = document.createElement('img');
+                        img.src = reader.result;
+                        Object.assign(img.style, { maxWidth: '120px', borderRadius: '8px' });
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            },
+            async save() {
+                if (!adminAuth.checkPermission('儲存器具', 'write_cookware')) return;
+                const name = document.getElementById('cookwareName').value.trim();
+                if (!name) { alert('請輸入器具名稱'); return; }
+                const data = {
+                    id: document.getElementById('cookwareId').value.trim(),
+                    name,
+                    'capacity(L)': document.getElementById('cookwareCapacity').value.trim(),
+                    image_b64: this._pendingImageB64 != null ? this._pendingImageB64 : this._keepExistingImage
+                };
+                try {
+                    await gas.upsertCookware(data, adminAuth.adminToken);
+                    this.cancelForm();
+                    await this.load();
+                    gas.showConnectionStatus('✅ 器具已儲存', 'success');
+                } catch (e) {
+                    alert('儲存失敗：' + e.message);
+                }
+            },
+            async remove(id) {
+                if (!adminAuth.checkPermission('刪除器具', 'write_cookware')) return;
+                if (!confirm('確定要刪除這種器具嗎？')) return;
+                try {
+                    await gas.deleteCookware(id, adminAuth.adminToken);
+                    await this.load();
+                    gas.showConnectionStatus('✅ 器具已刪除', 'success');
+                } catch (e) {
+                    alert('刪除失敗：' + e.message);
+                }
+            }
+        };
+
+        // ===== 稽核紀錄（AuditLogs）檢視模組 =====
+        const auditApp = {
+            async load() {
+                const body = document.getElementById('auditTableBody');
+                if (!adminAuth.hasPermission('view_audit')) {
+                    body.innerHTML = `<tr><td colspan="7">需要 view_audit 權限才能檢視稽核紀錄</td></tr>`;
+                    document.getElementById('auditStats').textContent = '未授權';
+                    return;
+                }
+                try {
+                    const logs = await gas.getAuditLogs(adminAuth.adminToken, 100);
+                    document.getElementById('auditStats').textContent = `最近 ${logs.length} 筆紀錄`;
+                    if (!logs.length) { body.innerHTML = `<tr><td colspan="7">尚無紀錄</td></tr>`; return; }
+                    body.innerHTML = logs.map(l => `
+                        <tr>
+                            <td>${(l.timestamp || '').replace('T', ' ').slice(0, 19)}</td>
+                            <td>${l.username || ''}</td>
+                            <td>${l.role ? `<span class="pill role">${l.role}</span>` : ''}</td>
+                            <td>${l.action || ''}</td>
+                            <td>${l.target_id || ''}</td>
+                            <td>${l.detail || ''}</td>
+                            <td>${String(l.success) === 'false' ? '<span class="pill fail">失敗</span>' : '<span class="pill success">成功</span>'}</td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    body.innerHTML = `<tr><td colspan="7">讀取失敗：${e.message}</td></tr>`;
+                }
+            }
+        };
+
+        // ===== 系統設定（SystemConfig）檢視/編輯模組 =====
+        const configApp = {
+            data: {},
+            async load() {
+                const wrap = document.getElementById('configList');
+                if (!adminAuth.hasPermission('manage_config')) {
+                    wrap.innerHTML = `<p style="padding:16px 0;color:var(--card-muted);">需要 manage_config 權限才能檢視系統設定</p>`;
+                    document.getElementById('configStats').textContent = '未授權';
+                    return;
+                }
+                try {
+                    this.data = await gas.getConfig(adminAuth.adminToken);
+                    document.getElementById('configStats').textContent = `共 ${Object.keys(this.data).length} 項設定`;
+                    this.render();
+                } catch (e) {
+                    wrap.innerHTML = `<p style="padding:16px 0;">讀取失敗：${e.message}</p>`;
+                }
+            },
+            render() {
+                const wrap = document.getElementById('configList');
+                const keys = Object.keys(this.data);
+                if (!keys.length) { wrap.innerHTML = '<p>尚無設定資料</p>'; return; }
+                wrap.innerHTML = keys.map(k => {
+                    const item = this.data[k];
+                    return `
+                    <div class="config-row">
+                        <div>
+                            <span class="config-key">${k}</span>
+                            ${item.description ? `<span class="config-desc">${item.description}</span>` : ''}
+                        </div>
+                        <input type="text" id="cfg_${k}" value="${(item.value || '').replace(/"/g, '&quot;')}" />
+                        <button class="btn btn-primary" style="padding:8px 14px;font-size:.85rem;" onclick="configApp.save('${k}')">儲存</button>
+                    </div>`;
+                }).join('');
+            },
+            async save(key) {
+                const input = document.getElementById('cfg_' + key);
+                if (!input) return;
+                try {
+                    await gas.setConfig(key, input.value, adminAuth.adminToken);
+                    gas.showConnectionStatus(`✅ 已更新設定：${key}`, 'success');
+                    await this.load();
+                } catch (e) {
+                    alert('更新失敗：' + e.message);
+                }
+            }
+        };
+
+        // ===== 主應用程式 =====
+        class RecipeApp {
+            constructor() {
+                this.storage = new MobileStorageManager();
+                this.recipes = []; this.filteredRecipes = []; this.currentView = 'grid';
+                this.editTargetId = null; this.pages = {
+                    browse: document.getElementById('browsePage'),
+                    add: document.getElementById('addPage'),
+                    ingredients: document.getElementById('ingredientsPage'),
+                    cookware: document.getElementById('cookwarePage'),
+                    audit: document.getElementById('auditPage'),
+                    config: document.getElementById('configPage')
+                };
+                this.navButtons = Array.from(document.querySelectorAll('.nav-btn'));
+                this.successMessage = null;
+                this.init();
+            }
+
+            norm(v) { return (v == null ? '' : String(v)).trim().toLowerCase(); }
+
+            parseIngredients(ingredientsStr) {
+                return String(ingredientsStr || '').split('+').map(s => s.trim()).filter(Boolean);
+            }
+
+            async init() {
+                try {
+                    await this.storage.init();
+                    this.bindUI();
+                    this.setupPWA();
+
+                    // 先初始化認證：會依 localStorage 還原登入狀態並更新 UI（含登入閘門顯示與否）
+                    adminAuth.init();
+                    cookwareApp.bindImageInput();
+
+                    if (adminAuth.isAdmin) {
+                        // 已登入 → 驗證 token 是否仍有效，順便載入資料
+                        await this.onLoggedIn();
+                    } else {
+                        // 未登入 → 顯示登入閘門，不載入任何資料
+                        this.onLoggedOut();
+                    }
+                } catch (err) {
+                    console.error('初始化失敗:', err);
+                    gas.showConnectionStatus('⌫ 初始化失敗: ' + err.message, 'error');
+                    this.showError('初始化失敗，請重新整理再試。');
+                }
+            }
+
+            // 登入後：載入雲端資料 + 食材庫 + 器具
+            async onLoggedIn() {
+                try { await gas.test(); } catch (e) { /* 狀態已於 gas.test() 內顯示 */ }
+                await this.pullFromCloud({ silent: true });
+                if (this.recipes.length === 0) { this.render(); }
+                ingredientsApp.load();
+                cookwareApp.load();
+            }
+
+            // 登出後：清空畫面資料，回到登入閘門
+            onLoggedOut() {
+                this.recipes = [];
+                this.filteredRecipes = [];
+                try { this.updateCategories(); } catch (e) { }
+                try { this.render(); } catch (e) { }
+            }
+
+            bindUI() {
+                const searchInput = document.getElementById('searchInput');
+                const categorySelect = document.getElementById('categorySelect');
+                const viewButtons = document.querySelectorAll('.view-btn');
+
+                if (searchInput) { const onSearch = () => this.filterRecipes(); searchInput.addEventListener('input', onSearch); searchInput.addEventListener('compositionend', onSearch); }
+                if (categorySelect) categorySelect.addEventListener('change', () => this.filterRecipes());
+                viewButtons.forEach(btn => { btn.addEventListener('click', (e) => { viewButtons.forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); this.currentView = e.currentTarget.dataset.view; this.updateViewClass(); }); });
+
+                document.getElementById('btnSync').addEventListener('click', () => this.pullFromCloud());
+                document.getElementById('btnClearData').addEventListener('click', () => this.confirmClearData());
+
+                this.navButtons.forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const pageKey = btn.dataset.page;
+
+                        // 全站需登入：任何分頁都需先登入
+                        if (!adminAuth.isAdmin) {
+                            adminAuth.showLoginModal();
+                            return;
+                        }
+                        // 權限限定頁面：進一步檢查
+                        if (pageKey === 'add' && !adminAuth.hasPermission('write_recipe')) {
+                            alert('⚠️ 新增食譜需要 write_recipe 權限'); return;
+                        }
+                        if (pageKey === 'audit' && !adminAuth.hasPermission('view_audit')) {
+                            alert('⚠️ 稽核紀錄需要 view_audit 權限'); return;
+                        }
+                        if (pageKey === 'config' && !adminAuth.hasPermission('manage_config')) {
+                            alert('⚠️ 系統設定需要 manage_config 權限'); return;
+                        }
+
+                        this.navButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        Object.values(this.pages).forEach(p => p && p.classList.remove('active'));
+                        if (this.pages[pageKey]) this.pages[pageKey].classList.add('active');
+                        if (pageKey === 'add' && this.successMessage) this.successMessage.style.display = 'none';
+                        if (pageKey === 'ingredients') ingredientsApp.load();
+                        if (pageKey === 'cookware') cookwareApp.load();
+                        if (pageKey === 'audit') auditApp.load();
+                        if (pageKey === 'config') configApp.load();
+                    });
+                });
+
+                const form = document.getElementById('addRecipeForm');
+                this.successMessage = document.getElementById('successMessage');
+                form.addEventListener('submit', async (e) => { e.preventDefault(); await this.handleAdd(); });
+
+                const tagsInput = document.getElementById('tagsInput');
+                const tagsDisplay = document.getElementById('tagsDisplay');
+                tagsInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && tagsInput.value.trim()) { e.preventDefault(); const tag = tagsInput.value.trim(); const chip = document.createElement('span'); chip.className = 'tag'; chip.dataset.tag = tag; chip.textContent = `#${tag} ×`; chip.addEventListener('click', () => chip.remove()); tagsDisplay.appendChild(chip); tagsInput.value = ''; } });
+
+                const editTagsInput = document.getElementById('editTagsInput');
+                const editTagsDisplay = document.getElementById('editTagsDisplay');
+                if (editTagsInput) {
+                    editTagsInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && editTagsInput.value.trim()) {
+                            e.preventDefault();
+                            this._addTagChip(editTagsDisplay, editTagsInput.value.trim());
+                            editTagsInput.value = '';
+                        }
+                    });
+                }
+
+                this.bindEditDrawerEvents();
+
+                const addImageInput = document.getElementById('recipeImageFile');
+                const addImagePreview = document.getElementById('addImagePreview');
+                addImageInput.addEventListener('change', (e) => { addImagePreview.innerHTML = ''; const file = e.target.files[0]; if (file) { const url = URL.createObjectURL(file); const img = document.createElement('img'); img.src = url; Object.assign(img.style, { maxWidth: '200px', maxHeight: '150px', borderRadius: '8px', objectFit: 'cover' }); addImagePreview.appendChild(img); } });
+
+                document.getElementById('imageFile').addEventListener('change', (e) => { const preview = document.getElementById('imagePreview'); preview.innerHTML = ''; const file = e.target.files[0]; if (file) { const url = URL.createObjectURL(file); const img = document.createElement('img'); img.src = url; Object.assign(img.style, { maxWidth: '100%', borderRadius: '8px' }); preview.appendChild(img); const caption = document.createElement('div'); caption.textContent = '新上傳的圖片預覽'; Object.assign(caption.style, { fontSize: '.9rem', color: '#666', marginTop: '8px' }); preview.appendChild(caption); } });
+            }
+
+            bindEditDrawerEvents() {
+                document.getElementById('closeDrawerX').addEventListener('click', () => this.closeEditDrawer());
+                document.getElementById('cancelEdit').addEventListener('click', () => { if (confirm('確定要取消編輯嗎？未儲存的變更將會遺失。')) this.closeEditDrawer(); });
+                document.getElementById('saveRecipe').addEventListener('click', async (e) => { e.preventDefault(); await this.saveEdited(); });
+                document.getElementById('deleteRecipe').addEventListener('click', async (e) => { e.preventDefault(); if (confirm('確定要刪除這個食譜嗎？此操作無法復原！')) await this.deleteRecipe(); });
+                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const drawer = document.getElementById('editDrawer'); if (!drawer.classList.contains('hidden')) this.closeEditDrawer(); } });
+                document.addEventListener('click', (e) => { const drawer = document.getElementById('editDrawer'); if (!drawer.classList.contains('hidden') && !drawer.contains(e.target)) { if (!e.target.matches('[onclick*="editRecipe"]')) this.closeEditDrawer(); } });
+            }
+
+            closeEditDrawer() {
+                const drawer = document.getElementById('editDrawer');
+                drawer.classList.add('hidden');
+                drawer.setAttribute('aria-hidden', 'true');
+                this.editTargetId = null;
+            }
+
+            setupPWA() {
+                this.updateOnlineStatus();
+                window.addEventListener('online', () => this.updateOnlineStatus());
+                window.addEventListener('offline', () => this.updateOnlineStatus());
+                window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.deferredPrompt = e; document.getElementById('installPrompt').style.display = 'block'; });
+                document.getElementById('installBtn').addEventListener('click', async () => { if (this.deferredPrompt) { this.deferredPrompt.prompt(); await this.deferredPrompt.userChoice; document.getElementById('installPrompt').style.display = 'none'; this.deferredPrompt = null; } });
+                if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => { }); }); }
+            }
+
+            updateOnlineStatus() { const offlineIndicator = document.getElementById('offlineIndicator'); offlineIndicator.style.display = navigator.onLine ? 'none' : 'block'; }
+
+            async pullFromCloud({ silent } = {}) {
+                try {
+                    const data = await gas.list();
+                    const norm = data.map(normalizeRecord);
+                    for (const c of norm) await this.storage.saveRecipe(c);
+                    this.recipes = (await this.storage.getAllRecipes()).map(c => ({ ...c, favorite: c.favorite === true }));
+                    this.filteredRecipes = [...this.recipes];
+                    this.updateCategories();
+                    this.render();
+                    if (!silent) gas.showConnectionStatus(`✅ 已成功同步 ${this.recipes.length} 筆資料`, 'success');
+                } catch (err) {
+                    console.warn('雲端讀取失敗，改用本機快取：', err);
+                    if (!silent) gas.showConnectionStatus('⚠️ 雲端連線失敗，顯示本機快取資料', 'warning');
+                    this.recipes = (await this.storage.getAllRecipes()).map(c => ({ ...c, favorite: c.favorite === true }));
+                    this.filteredRecipes = [...this.recipes];
+                    this.updateCategories();
+                    this.render();
+                }
+            }
+
+            async handleAdd() {
+                if (!adminAuth.checkPermission('新增', 'write_recipe')) return;
+                try {
+                    const title = document.getElementById('recipeTitle').value.trim() || '未命名料理';
+                    const category = document.getElementById('recipeCategory').value.trim();
+                    const cookwareType = document.getElementById('cookwareType').value.trim();
+                    const calories = document.getElementById('calories').value.trim();
+                    const cookTime = document.getElementById('cookTime').value.trim();
+                    const difficulty = document.getElementById('difficulty').value.trim();
+                    const servings = document.getElementById('servings').value.trim();
+                    const chips = Array.from(document.querySelectorAll('#tagsDisplay .tag')).map(x => x.dataset.tag);
+                    const tags = chips.join(';');
+                    const ingredients = Array.from(document.querySelectorAll('#ingredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
+                    const instructions = Array.from(document.querySelectorAll('#instructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
+
+                    let image_b64 = '';
+                    const imageFile = document.getElementById('recipeImageFile').files[0];
+                    const newId = this.makeId();
+                    if (imageFile) { try { const saved = await this.storage.saveImage(imageFile, newId); image_b64 = saved.dataUrl; } catch (err) { console.warn('圖片快取失敗（不影響文字資料）：', err); } }
+
+                    const rec = { id: newId, title, category, tags, ingredients, instructions, cookware: cookwareType, calories: calories || '', cook_time: cookTime || '', difficulty: difficulty || '', servings: servings || '', image_b64 };
+                    const recNorm = normalizeRecord(rec);
+                    await gas.upsert(recNorm, adminAuth.adminToken);
+                    await this.storage.saveRecipe(recNorm);
+
+                    await this.pullFromCloud({ silent: true });
+                    this.render();
+                    this.successMessage.style.display = 'block';
+                    const browseBtn = this.navButtons.find(b => b.dataset.page === 'browse'); browseBtn?.click();
+                    this.clearForm();
+                } catch (err) {
+                    console.error('新增失敗：', err);
+                    gas.showConnectionStatus('⌫ 新增失敗: ' + err.message, 'error');
+                    alert('新增失敗：' + err.message);
+                }
+            }
+
+            makeId() { return 'C' + String(Date.now()); }
+
+            setSelectValue(sel, value) {
+                if (!sel) return;
+                value = value || '';
+                if (value && !Array.from(sel.options).some(o => o.value === value)) {
+                    const opt = document.createElement('option');
+                    opt.value = value; opt.textContent = value; sel.appendChild(opt);
+                }
+                sel.value = value;
+            }
+
+            // 依 Cookware 資料表內容重建「器具」下拉選單（新增表單與編輯抽屜共用）。
+            // 保留第一個 placeholder 選項；並盡量維持使用者當前已選的值。
+            populateCookwareSelects(cookware) {
+                const list = Array.isArray(cookware) ? cookware : [];
+                this._cookwareList = list; // 供 setCookwareOptionsFor 及編輯時參考
+                ['cookwareType', 'editCookwareType'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    if (!sel) return;
+                    const prev = sel.value;
+                    // 移除除了第一個 placeholder 以外的選項
+                    sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+                    list.forEach(g => {
+                        const name = g.name || '';
+                        if (!name) return;
+                        const opt = document.createElement('option');
+                        const cap = g['capacity(L)'] || '';
+                        opt.value = name;
+                        opt.textContent = cap ? `${name}（${cap}L）` : name;
+                        sel.appendChild(opt);
+                    });
+                    // 還原先前選取值（若仍存在）
+                    if (prev && Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+                });
+            }
+
+            _addTagChip(display, tag) {
+                if (!display || !tag) return;
+                const chip = document.createElement('span');
+                chip.className = 'tag';
+                chip.dataset.tag = tag;
+                chip.textContent = `#${tag} ×`;
+                chip.style.cursor = 'pointer';
+                chip.addEventListener('click', () => chip.remove());
+                display.appendChild(chip);
+            }
+
+            _makeIngredientRow(value = '') {
+                const div = document.createElement('div');
+                div.className = 'ingredient-item';
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.setAttribute('list', 'ingredientNameOptions');
+                input.placeholder = '例如：雞蛋 2 顆';
+                input.value = value;
+                const btn = document.createElement('button');
+                btn.type = 'button'; btn.className = 'remove-btn'; btn.textContent = '移除';
+                btn.addEventListener('click', () => div.remove());
+                div.appendChild(input); div.appendChild(btn);
+                return div;
+            }
+
+            renderEditIngredients(list) {
+                const wrap = document.getElementById('editIngredientsList');
+                wrap.innerHTML = '';
+                (list && list.length ? list : ['']).forEach(val => wrap.appendChild(this._makeIngredientRow(val)));
+            }
+
+            addEditIngredient() { document.getElementById('editIngredientsList').appendChild(this._makeIngredientRow('')); }
+
+            _renumberEditInstructions() {
+                Array.from(document.querySelectorAll('#editInstructionsList .instruction-item span')).forEach((s, i) => s.textContent = (i + 1) + '.');
+            }
+
+            _makeInstructionRow(value = '', idx = 1) {
+                const div = document.createElement('div');
+                div.className = 'instruction-item';
+                const span = document.createElement('span');
+                span.style.cssText = 'font-weight:bold;min-width:30px;';
+                span.textContent = idx + '.';
+                const input = document.createElement('input');
+                input.type = 'text'; input.placeholder = '詳細描述步驟'; input.value = value;
+                const btn = document.createElement('button');
+                btn.type = 'button'; btn.className = 'remove-btn'; btn.textContent = '移除';
+                btn.addEventListener('click', () => { div.remove(); this._renumberEditInstructions(); });
+                div.appendChild(span); div.appendChild(input); div.appendChild(btn);
+                return div;
+            }
+
+            renderEditInstructions(list) {
+                const wrap = document.getElementById('editInstructionsList');
+                wrap.innerHTML = '';
+                (list && list.length ? list : ['']).forEach((v, i) => wrap.appendChild(this._makeInstructionRow(v, i + 1)));
+            }
+
+            addEditInstruction() {
+                const wrap = document.getElementById('editInstructionsList');
+                const idx = wrap.querySelectorAll('.instruction-item').length + 1;
+                wrap.appendChild(this._makeInstructionRow('', idx));
+            }
+
+            async editRecipe(id) {
+                if (!adminAuth.checkPermission('編輯', 'write_recipe')) return;
+                const c = this.recipes.find(r => r.id === id); if (!c) return;
+                this.editTargetId = id;
+
+                document.getElementById('editTitle').value = c.title || '';
+                this.setSelectValue(document.getElementById('editCategory'), c.category || '');
+                this.setSelectValue(document.getElementById('editCookwareType'), c.cookware || '');
+                document.getElementById('editCalories').value = c.calories || '';
+                document.getElementById('editCookTime').value = c.cook_time || '';
+                this.setSelectValue(document.getElementById('editDifficulty'), c.difficulty || '');
+                document.getElementById('editServings').value = c.servings || '';
+
+                const tagsDisplay = document.getElementById('editTagsDisplay');
+                tagsDisplay.innerHTML = '';
+                String(c.tags || '').split(';').map(t => t.trim()).filter(Boolean).forEach(t => this._addTagChip(tagsDisplay, t));
+
+                this.renderEditIngredients(this.parseIngredients(c.ingredients));
+                this.renderEditInstructions(String(c.instructions || '').split('>').map(s => s.trim()).filter(Boolean));
+
+                const fileInput = document.getElementById('imageFile'); if (fileInput) fileInput.value = '';
+                const preview = document.getElementById('imagePreview'); preview.innerHTML = '';
+                try {
+                    const src = await this.storage.getImage(c.id);
+                    if (src) {
+                        const img = document.createElement('img'); img.src = src;
+                        Object.assign(img.style, { maxWidth: '100%', borderRadius: '8px', marginBottom: '8px' });
+                        preview.appendChild(img);
+                        const caption = document.createElement('div'); caption.textContent = '目前的圖片';
+                        Object.assign(caption.style, { fontSize: '.9rem', color: '#8a7a64' });
+                        preview.appendChild(caption);
+                    }
+                } catch (e) { console.warn('載入圖片失敗：', e); }
+
+                const drawer = document.getElementById('editDrawer');
+                drawer.classList.remove('hidden');
+                drawer.setAttribute('aria-hidden', 'false');
+                drawer.scrollTop = 0;
+            }
+
+            async saveEdited() {
+                try {
+                    const idx = this.recipes.findIndex(r => r.id === this.editTargetId); if (idx === -1) return;
+                    let image_b64 = this.recipes[idx].image_b64 || '';
+                    const imageFile = document.getElementById('imageFile').files[0];
+                    if (imageFile) { try { const saved = await this.storage.saveImage(imageFile, this.editTargetId); image_b64 = saved.dataUrl; } catch (e) { console.warn('圖片更新快取失敗：', e); } }
+
+                    const title = document.getElementById('editTitle').value.trim();
+                    const category = document.getElementById('editCategory').value.trim();
+                    const cookware = document.getElementById('editCookwareType').value.trim();
+                    const calories = document.getElementById('editCalories').value.trim();
+                    const cook_time = document.getElementById('editCookTime').value.trim();
+                    const difficulty = document.getElementById('editDifficulty').value.trim();
+                    const servings = document.getElementById('editServings').value.trim();
+                    const tags = Array.from(document.querySelectorAll('#editTagsDisplay .tag')).map(x => x.dataset.tag).join(';');
+                    const ingredients = Array.from(document.querySelectorAll('#editIngredientsList .ingredient-item input')).map(i => i.value.trim()).filter(Boolean).join('+');
+                    const instructions = Array.from(document.querySelectorAll('#editInstructionsList .instruction-item input')).map(i => i.value.trim()).filter(Boolean).join('>');
+
+                    const updated = { ...this.recipes[idx], favorite: this.recipes[idx].favorite === true, title, category, cookware, calories, cook_time, difficulty, tags, ingredients, instructions, servings, image_b64 };
+                    const updatedNorm = normalizeRecord(updated);
+                    await gas.upsert(updatedNorm, adminAuth.adminToken);
+                    await this.storage.saveRecipe(updatedNorm);
+
+                    await this.pullFromCloud({ silent: true });
+                    this.render();
+                    this.closeEditDrawer();
+                    gas.showConnectionStatus('✅ 編輯儲存成功', 'success');
+                } catch (err) {
+                    console.error('儲存編輯失敗：', err);
+                    gas.showConnectionStatus('⌫ 儲存失敗: ' + err.message, 'error');
+                    alert('儲存失敗：' + err.message);
+                }
+            }
+
+            async deleteRecipe() {
+                try {
+                    const id = this.editTargetId;
+                    await gas.remove(id, adminAuth.adminToken);
+                    await this.storage.deleteRecipe(id);
+                    await this.pullFromCloud({ silent: true });
+                    this.render();
+                    this.closeEditDrawer();
+                    gas.showConnectionStatus('✅ 刪除成功', 'success');
+                } catch (err) {
+                    console.error('刪除失敗：', err);
+                    gas.showConnectionStatus('⌫ 刪除失敗: ' + err.message, 'error');
+                    alert('刪除失敗：' + err.message);
+                }
+            }
+
+            addIngredient() { document.getElementById('ingredientsList').appendChild(this._makeIngredientRow('')); }
+            removeIngredient(btn) { btn.closest('.ingredient-item')?.remove(); }
+
+            addInstruction() { const wrap = document.getElementById('instructionsList'); const idx = wrap.querySelectorAll('.instruction-item').length + 1; const div = document.createElement('div'); div.className = 'instruction-item'; div.innerHTML = `<span style="font-weight:bold;min-width:30px;">${idx}.</span><input type="text" placeholder="詳細描述步驟" /><button type="button" class="remove-btn">移除</button>`; div.querySelector('.remove-btn').addEventListener('click', () => { div.remove(); Array.from(wrap.querySelectorAll('.instruction-item span')).forEach((s, i) => s.textContent = (i + 1) + '.'); }); wrap.appendChild(div); }
+            removeInstruction(btn) { btn.closest('.instruction-item')?.remove(); }
+
+            clearForm() {
+                document.getElementById('addRecipeForm').reset();
+                document.getElementById('tagsDisplay').innerHTML = '';
+                document.getElementById('addImagePreview').innerHTML = '';
+                const ingredientsList = document.getElementById('ingredientsList');
+                ingredientsList.innerHTML = '';
+                ingredientsList.appendChild(this._makeIngredientRow(''));
+                document.getElementById('instructionsList').innerHTML = `<div class="instruction-item"><span style="font-weight: bold; min-width: 30px;">1.</span><input type="text" placeholder="詳細描述第一個步驟" /><button type="button" class="remove-btn" onclick="app.removeInstruction(this)">移除</button></div>`;
+            }
+
+            updateCategories() { const sel = document.getElementById('categorySelect'); if (!sel) return; const categories = [...new Set(this.recipes.map(r => (r.category || '').trim()).filter(Boolean))].sort(); sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove()); categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt); }); }
+
+            filterRecipes() {
+                const searchTerm = this.norm(document.getElementById('searchInput')?.value || '');
+                const selectedCategoryRaw = document.getElementById('categorySelect')?.value || '';
+                const selectedCategory = (selectedCategoryRaw || '').trim();
+                const favoriteOnly = document.getElementById('favoriteOnlyFilter')?.checked || false;
+                if (!Array.isArray(this.recipes)) this.recipes = [];
+
+                this.filteredRecipes = this.recipes.filter(r => {
+                    const title = this.norm(r?.title);
+                    const tags = this.norm(r?.tags);
+                    const category = (r?.category || '').trim();
+                    const ingredientsText = this.norm(r?.ingredients);
+                    const matchesSearch = !searchTerm || title.includes(searchTerm) || tags.includes(searchTerm) || ingredientsText.includes(searchTerm);
+                    const matchesCategory = !selectedCategory || category === selectedCategory;
+                    const matchesFavorite = !favoriteOnly || (r?.favorite === true);
+                    return matchesSearch && matchesCategory && matchesFavorite;
+                });
+
+                const favoriteCount = this.recipes.filter(c => c.favorite === true).length;
+                const countEl = document.getElementById('favoriteCount');
+                if (countEl) countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
+
+                this.render();
+            }
+
+            updateViewClass() { const container = document.getElementById('recipesContainer'); container.className = this.currentView === 'grid' ? 'recipes-grid' : 'recipes-list'; }
+            updateStats() { const stats = document.getElementById('stats'); const total = this.recipes.length, showing = this.filteredRecipes.length; stats.textContent = `顯示 ${showing} / ${total} 道料理`; }
+
+            getPopularTags(limit = 15) {
+                const tagFrequency = {};
+                this.recipes.forEach(recipe => {
+                    if (recipe.tags) {
+                        const tags = String(recipe.tags).split(';').map(t => t.trim()).filter(Boolean);
+                        tags.forEach(tag => { tagFrequency[tag] = (tagFrequency[tag] || 0) + 1; });
+                    }
+                });
+                return Object.entries(tagFrequency).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([tag, count]) => ({ tag, count }));
+            }
+
+            renderPopularTags() {
+                const container = document.getElementById('popularTagsContainer');
+                if (!container) return;
+                const popularTags = this.getPopularTags(15);
+                if (popularTags.length === 0) { container.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">暫無標籤數據</div>'; return; }
+                const searchInput = document.getElementById('searchInput');
+                const currentSearchTerm = (searchInput?.value || '').toLowerCase().trim();
+                container.innerHTML = popularTags.map(({ tag, count }) => {
+                    const isActive = currentSearchTerm.includes(tag.toLowerCase());
+                    return `<button class="tag-btn ${isActive ? 'active' : ''}" type="button" onclick="app.filterByTag('${tag.replace(/'/g, "\\'")}', this)" title="${tag} (${count} 道)">#${tag}<span class="tag-count">(${count})</span></button>`;
+                }).join('');
+            }
+
+            filterByTag(tag, buttonEl) {
+                const searchInput = document.getElementById('searchInput');
+                const currentValue = searchInput.value.trim();
+                if (currentValue.toLowerCase().includes(tag.toLowerCase())) {
+                    searchInput.value = currentValue.split(/\s+/).filter(t => t.toLowerCase() !== tag.toLowerCase()).join(' ').trim();
+                } else {
+                    searchInput.value = currentValue ? `${currentValue} ${tag}` : tag;
+                }
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            updatePopularTags() { this.renderPopularTags(); }
+
+            async toggleFavorite(recipeId) {
+                try {
+                    const idx = this.recipes.findIndex(c => c.id === recipeId);
+                    if (idx === -1) return;
+                    this.recipes[idx].favorite = !this.recipes[idx].favorite;
+                    await this.storage.saveRecipe(this.recipes[idx]);
+                    if (this.recipes[idx].favorite) gas.showConnectionStatus('⭐ 已加入收藏（僅本機）', 'success');
+                    else gas.showConnectionStatus('🗑️ 已移除收藏', 'success');
+                    this.filterRecipes();
+                } catch (err) {
+                    console.error('切換收藏失敗：', err);
+                    gas.showConnectionStatus('⌫ 切換收藏失敗', 'error');
+                }
+            }
+
+            renderRecipes() {
+                const container = document.getElementById('recipesContainer');
+                if (this.filteredRecipes.length === 0) { container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><h3>找不到符合條件的美食食譜</h3><p>試著調整搜尋關鍵字或分類篩選</p></div>`; return; }
+                container.innerHTML = this.filteredRecipes.map(c => {
+                    const tagsHtml = (c.tags ? String(c.tags).split(';').map(tag => `<span class="tag">${tag.trim()}</span>`).join('') : '');
+                    const cookware = c.cookware || '', calories = c.calories || '', cookTime = c.cook_time || '', difficulty = c.difficulty || '';
+                    const ingredientsArr = this.parseIngredients(c.ingredients);
+                    const ingredientsHtml = ingredientsArr.length > 0 ? ingredientsArr.map(ing => `<div>• ${ing}</div>`).join('') : '';
+                    const instructionsList = Array.isArray(c.instructions) ? c.instructions : String(c.instructions ?? '').split('>');
+                    return `
+        <div class="recipe-card">
+          <div class="recipe-image">${c.image_b64 ? `<img src="${c.image_b64}" alt="${c.title}">` : '🍽️'}</div>
+          <div class="recipe-content">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; gap: 8px;">
+              <h3 class="recipe-title" style="flex: 1;">${c.title || ''}</h3>
+              <button onclick="app.toggleFavorite('${c.id}')" class="btn favorite-toggle" style="font-size:.8rem; padding:4px 8px; background: ${c.favorite ? '#ffc107' : 'rgba(255,255,255,0.2)'}; color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="${c.favorite ? '移除收藏' : '加入收藏'}">⭐ ${c.favorite ? '已收藏' : '收藏'}</button>
+              <button onclick="app.editRecipe('${c.id}')" class="btn recipe-write-only" style="font-size:.8rem; padding:4px 8px;">編輯</button>
+            </div>
+            <div class="recipe-meta">
+              ${cookware ? `<span class="meta-item">🍳 ${cookware}</span>` : ''}
+              ${calories ? `<span class="meta-item">🔥 ${calories} kcal</span>` : ''}
+              ${cookTime ? `<span class="meta-item">⏱️ ${cookTime}</span>` : ''}
+              ${difficulty ? `<span class="meta-item">⭐ ${difficulty}</span>` : ''}
+              <span class="meta-item">👥 ${c.servings || '1'} 份</span>
+            </div>
+            ${tagsHtml ? `<div class="recipe-tags">${tagsHtml}</div>` : ''}
+            <div class="recipe-details">
+              <details><summary>🍳 食材清單</summary><div class="ingredients-list">${ingredientsHtml || '<div style="color: #999;">暫無食材</div>'}</div></details>
+              <details><summary>🍴 料理作法</summary><div class="instructions-list">${instructionsList.filter(Boolean).map(s => `<div class="instruction">${String(s).trim()}</div>`).join('')}</div></details>
+            </div>
+          </div>
+        </div>`;
+                }).join('');
+            }
+
+            render() {
+                this.updateStats();
+                this.updatePopularTags();
+                const favoriteCount = this.recipes.filter(c => c.favorite === true).length;
+                const countEl = document.getElementById('favoriteCount');
+                if (countEl) countEl.textContent = favoriteCount > 0 ? `⭐ 共有 ${favoriteCount} 個收藏` : '';
+                this.renderRecipes();
+                this.updateViewClass();
+            }
+
+            async confirmClearData() {
+                if (confirm('⚠️ 確定要清除本機快取嗎？不影響雲端資料。')) {
+                    try {
+                        await this.storage.clearAllData();
+                        this.recipes = []; this.filteredRecipes = [];
+                        this.updateCategories(); this.render();
+                        gas.showConnectionStatus('✅ 本機快取已清除', 'success');
+                    } catch (err) { alert('清除失敗：' + err.message); }
+                }
+            }
+
+            async migrateLocalData() {
+                const all = await this.storage.getAllRecipes();
+                for (const c of all) { const fixed = normalizeRecord(c); await this.storage.saveRecipe(fixed); }
+                this.recipes = (await this.storage.getAllRecipes()).map(c => ({ ...c, favorite: c.favorite === true }));
+                this.filteredRecipes = [...this.recipes];
+                this.render();
+                alert('✅ 已完成本機資料格式遷移');
+            }
+
+            showError(msg) { alert(msg); }
+        }
+
+        const app = new RecipeApp();
+        window.app = app;
+        window.ingredientsApp = ingredientsApp;
+        window.cookwareApp = cookwareApp;
+        window.auditApp = auditApp;
+        window.configApp = configApp;
+
+        window.requireAdmin = function (operation = '此操作') { return adminAuth.checkPermission(operation); };
+
+        window.gasDebug = {
+            test: () => gas.test(),
+            list: () => gas.list(),
+            listIngredients: () => gas.listIngredients(),
+            showUrl: () => console.log('GAS URL:', gas.url),
+            adminLogin: (username, password) => gas.adminLogin(username, password),
+            refreshToken: () => adminAuth.tryRefreshAccessToken(),
+            checkAdmin: () => console.log('Admin Status:', {
+                isAdmin: adminAuth.isAdmin, user: adminAuth.adminUser,
+                accessToken: adminAuth.adminToken ? 'Present' : 'None',
+                refreshToken: adminAuth.refreshToken ? 'Present' : 'None'
+            })
+        };
+    </script>
+</body>
+
+</html>
