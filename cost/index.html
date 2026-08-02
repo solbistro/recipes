@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>成本控管中樞 · Cost Hub</title>
+    <meta name="theme-color" content="#14100d" />
+
+    <!-- ============================================================
+         成本控管中樞（Cost Hub）— GitHub Pages 純靜態前端
+         後端：兩個 Google Apps Script 專案（Food API / Beverage API），
+               各自已安裝 CostControl.gs 模組。
+         用法：把下方兩個 /exec 網址換成你的實際部署網址即可。
+               若日後網址變更，只需改這兩行。
+    ============================================================ -->
+    <script>
+        window.__COST_ENDPOINTS__ = {
+            food: {
+                label: "餐點 Food",
+                icon: "🍽️",
+                // ← 換成「美食食譜 API」專案部署後的 /exec 網址
+                url: "https://script.google.com/macros/s/REPLACE_WITH_FOOD_EXEC/exec"
+            },
+            beverage: {
+                label: "酒水 Beverage",
+                icon: "🍸",
+                // ← 換成「雞尾酒譜 API」專案部署後的 /exec 網址
+                url: "https://script.google.com/macros/s/AKfycbxLfVJbaIup1CCoz-3jGKibzu6DA2KeXWjT6WhRpMrcpI9-hlnnZH4zf5P2YUCcx33PtA/exec"
+            }
+        };
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============ 設計語彙：後場成本帳本 / Expo Pass ============ */
+        :root {
+            --bg: #14100d;
+            --bg-2: #1a1511;
+            --panel: #1e1813;
+            --panel-2: #241d16;
+            --ink: #f2e9db;
+            --ink-muted: rgba(242, 233, 219, .60);
+            --ink-faint: rgba(242, 233, 219, .38);
+            --brass: #d4a460;
+            --brass-bright: #eecb92;
+            --brass-deep: #a9743a;
+            --hairline: rgba(212, 164, 96, .16);
+            --hairline-strong: rgba(212, 164, 96, .32);
+
+            /* 帳本卡片（資料密集區用亮底，像列印報表） */
+            --sheet: #f7f2e8;
+            --sheet-ink: #2a2118;
+            --sheet-muted: #8a7a63;
+            --sheet-line: #e6dccb;
+            --sheet-head: #efe6d4;
+
+            /* 號誌系統（貫穿全站的簽名元素） */
+            --ok: #5f9e5a;
+            --ok-soft: #dcecd6;
+            --warn: #d1972f;
+            --warn-soft: #f4e6c6;
+            --bad: #c8543c;
+            --bad-soft: #f2d6cd;
+
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 22px 60px rgba(0, 0, 0, .5);
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--ink);
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(720px 460px at 8% -6%, rgba(212, 164, 96, .13), transparent 62%),
+                radial-gradient(680px 520px at 96% 4%, rgba(150, 70, 45, .12), transparent 58%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 所有數字用等寬對齊：帳本的靈魂 */
+        .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+        a { color: var(--brass-bright); }
+
+        button { font-family: inherit; }
+        :focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; border-radius: 4px; }
+
+        /* ---------------- 頂欄 ---------------- */
+        .topbar {
+            position: sticky; top: 0; z-index: 40;
+            display: flex; align-items: center; gap: 16px;
+            padding: 14px clamp(16px, 4vw, 40px);
+            background: rgba(20, 16, 13, .82);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--hairline);
+        }
+        .topbar .mark {
+            font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
+            letter-spacing: .3px; white-space: nowrap;
+        }
+        .topbar .mark b { color: var(--brass); font-weight: 700; }
+        .topbar .spacer { flex: 1; }
+
+        /* 資料來源切換（餐/酒） */
+        .source-switch { display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 999px; border: 1px solid var(--hairline); }
+        .source-switch button {
+            border: 0; background: transparent; color: var(--ink-muted);
+            padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: .84rem;
+            cursor: pointer; transition: .18s; display: flex; align-items: center; gap: 6px;
+        }
+        .source-switch button[aria-pressed="true"] { background: var(--brass); color: #1c140a; }
+        .source-switch button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+
+        .who { display: flex; align-items: center; gap: 10px; font-size: .82rem; color: var(--ink-muted); }
+        .who .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(95,158,90,.2); }
+        .btn {
+            border: 1px solid var(--hairline-strong); background: var(--panel);
+            color: var(--ink); padding: 8px 14px; border-radius: 10px;
+            font-weight: 600; font-size: .84rem; cursor: pointer; transition: .16s; white-space: nowrap;
+        }
+        .btn:hover { border-color: var(--brass); color: var(--brass-bright); }
+        .btn.primary { background: var(--brass); color: #1c140a; border-color: transparent; }
+        .btn.primary:hover { background: var(--brass-bright); color: #1c140a; }
+        .btn.ghost { background: transparent; }
+        .btn.danger { border-color: rgba(200,84,60,.5); color: #eaa593; }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn.sm { padding: 5px 10px; font-size: .78rem; }
+
+        /* ---------------- 版面 ---------------- */
+        .wrap { max-width: 1240px; margin: 0 auto; padding: clamp(20px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px; }
+
+        .eyebrow { font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--brass); font-weight: 700; }
+        h1.page-title { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.08; margin: 8px 0 6px; }
+        .page-sub { color: var(--ink-muted); max-width: 60ch; font-size: .95rem; }
+
+        /* ---------------- Hero 北極星儀表 ---------------- */
+        .hero {
+            margin-top: 26px;
+            display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px;
+        }
+        @media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+
+        .gauge-card {
+            background: linear-gradient(160deg, var(--panel-2), var(--panel));
+            border: 1px solid var(--hairline); border-radius: var(--radius);
+            padding: 24px; position: relative; overflow: hidden;
+        }
+        .gauge-card::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(420px 200px at 90% -20%, rgba(212,164,96,.14), transparent 60%);
+        }
+        .gauge-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+        .gauge-head .lbl { font-size: .82rem; color: var(--ink-muted); font-weight: 600; }
+        .gauge-flag { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+
+        .gauge-value { display: flex; align-items: flex-end; gap: 8px; margin: 14px 0 4px; }
+        .gauge-value .big { font-family: var(--font-mono); font-weight: 600; font-size: clamp(2.6rem, 7vw, 3.6rem); line-height: .9; }
+        .gauge-value .vs { color: var(--ink-muted); font-size: .9rem; padding-bottom: 8px; }
+        .gauge-value .vs b { font-family: var(--font-mono); color: var(--ink); }
+
+        .bar { position: relative; height: 12px; border-radius: 999px; background: rgba(255,255,255,.06); margin: 18px 0 8px; overflow: hidden; }
+        .bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+        .bar .target { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--brass-bright); }
+        .bar-legend { display: flex; justify-content: space-between; font-size: .72rem; color: var(--ink-faint); }
+
+        .split { display: flex; gap: 10px; margin-top: 18px; }
+        .split .chip {
+            flex: 1; background: rgba(255,255,255,.04); border: 1px solid var(--hairline);
+            border-radius: 12px; padding: 12px 14px;
+        }
+        .split .chip .k { font-size: .74rem; color: var(--ink-muted); }
+        .split .chip .v { font-family: var(--font-mono); font-size: 1.35rem; font-weight: 600; margin-top: 2px; }
+        .split .chip .sub { font-size: .72rem; color: var(--ink-faint); }
+
+        /* KPI 小卡 */
+        .kpis { display: grid; grid-template-rows: repeat(2, 1fr); gap: 14px; }
+        .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .kpi {
+            background: var(--panel); border: 1px solid var(--hairline);
+            border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; justify-content: center;
+        }
+        .kpi .k { font-size: .76rem; color: var(--ink-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .kpi .v { font-family: var(--font-mono); font-size: 1.7rem; font-weight: 600; margin-top: 4px; }
+        .kpi .v small { font-size: .8rem; color: var(--ink-muted); }
+
+        /* ---------------- 分頁 ---------------- */
+        .tabs { display: flex; gap: 4px; margin: 34px 0 18px; border-bottom: 1px solid var(--hairline); overflow-x: auto; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            border: 0; background: transparent; color: var(--ink-muted);
+            padding: 12px 16px; font-weight: 600; font-size: .9rem; cursor: pointer;
+            white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: .16s;
+        }
+        .tab:hover { color: var(--ink); }
+        .tab[aria-selected="true"] { color: var(--brass-bright); border-bottom-color: var(--brass); }
+        .tab .badge { font-family: var(--font-mono); font-size: .72rem; color: var(--ink-faint); margin-left: 6px; }
+
+        .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+        .panel-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; }
+        .panel-head .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .search {
+            background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px;
+            padding: 8px 12px; color: var(--ink); font-size: .86rem; min-width: 180px;
+        }
+        .search::placeholder { color: var(--ink-faint); }
+
+        /* ---------------- 帳本表格（亮底） ---------------- */
+        .sheet { background: var(--sheet); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+        .sheet-scroll { overflow-x: auto; }
+        table.ledger { width: 100%; border-collapse: collapse; font-size: .86rem; color: var(--sheet-ink); min-width: 720px; }
+        table.ledger thead th {
+            background: var(--sheet-head); color: var(--brass-deep); font-weight: 700;
+            text-align: left; padding: 12px 14px; white-space: nowrap; position: sticky; top: 0;
+            border-bottom: 2px solid var(--sheet-line); font-size: .78rem; letter-spacing: .02em;
+        }
+        table.ledger tbody td { padding: 11px 14px; border-bottom: 1px solid var(--sheet-line); white-space: nowrap; }
+        table.ledger tbody tr:last-child td { border-bottom: 0; }
+        table.ledger tbody tr:hover { background: rgba(212, 164, 96, .07); }
+        table.ledger td.n, table.ledger th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+        table.ledger .name { font-weight: 600; }
+        table.ledger .muted { color: var(--sheet-muted); }
+        table.ledger tfoot td { padding: 12px 14px; font-weight: 700; background: var(--sheet-head); border-top: 2px solid var(--sheet-line); font-family: var(--font-mono); text-align: right; }
+        table.ledger tfoot td.lbl { font-family: var(--font-body); text-align: left; color: var(--brass-deep); }
+
+        /* 號誌燈 chip（簽名元素） */
+        .light { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .78rem; padding: 3px 10px; border-radius: 999px; font-family: var(--font-body); }
+        .light::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+        .light.ok { background: var(--ok-soft); color: #2f6a2a; } .light.ok::before { background: var(--ok); }
+        .light.warn { background: var(--warn-soft); color: #8a5a10; } .light.warn::before { background: var(--warn); }
+        .light.bad { background: var(--bad-soft); color: #8a2f1d; } .light.bad::before { background: var(--bad); }
+
+        /* 成本率 pill（相對目標） */
+        .rate-pill { font-family: var(--font-mono); font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+        .rate-pill.under { background: var(--ok-soft); color: #2f6a2a; }
+        .rate-pill.near { background: var(--warn-soft); color: #8a5a10; }
+        .rate-pill.over { background: var(--bad-soft); color: #8a2f1d; }
+
+        .amt-neg { color: var(--bad); }
+        .amt-pos { color: #2f6a2a; }
+
+        /* ---------------- Cost–Margin Map (定位圖) ---------------- */
+        .map-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 20px; }
+        .map-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+        @media (max-width: 820px) { .map-wrap { grid-template-columns: 1fr; } }
+        .scatter { position: relative; width: 100%; aspect-ratio: 1.25 / 1; background:
+            linear-gradient(rgba(212,164,96,.05), rgba(212,164,96,.05)); border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; }
+        .scatter .qlabel { position: absolute; font-size: .7rem; color: var(--ink-faint); font-weight: 700; letter-spacing: .04em; }
+        .scatter .axis { position: absolute; background: var(--hairline-strong); }
+        .scatter .dot {
+            position: absolute; width: 12px; height: 12px; border-radius: 50%;
+            transform: translate(-50%, 50%); cursor: pointer; border: 2px solid rgba(255,255,255,.5);
+            transition: transform .12s;
+        }
+        .scatter .dot:hover { transform: translate(-50%, 50%) scale(1.5); z-index: 5; }
+        .maplegend { display: flex; flex-direction: column; gap: 10px; }
+        .maplegend .qrow { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,.03); border: 1px solid var(--hairline); border-radius: 10px; }
+        .maplegend .qrow .qdot { width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+        .maplegend .qrow .qt { font-weight: 700; font-size: .88rem; }
+        .maplegend .qrow .qd { font-size: .78rem; color: var(--ink-muted); }
+        .maplegend .qrow .qc { font-family: var(--font-mono); margin-left: auto; color: var(--ink-faint); }
+
+        /* ---------------- 空狀態 / 載入 ---------------- */
+        .empty { background: var(--panel); border: 1px dashed var(--hairline-strong); border-radius: var(--radius); padding: 46px 28px; text-align: center; }
+        .empty .em { font-size: 2rem; }
+        .empty h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; margin: 12px 0 6px; }
+        .empty p { color: var(--ink-muted); max-width: 46ch; margin: 0 auto 18px; font-size: .9rem; }
+        .empty .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+        .skeleton { background: var(--panel); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 20px; }
+        .skeleton .line { height: 14px; background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.10), rgba(255,255,255,.04)); background-size: 200% 100%; border-radius: 6px; margin: 10px 0; animation: sh 1.3s linear infinite; }
+        @keyframes sh { to { background-position: -200% 0; } }
+
+        /* ---------------- 連線 / 提示條 ---------------- */
+        .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 60;
+            background: var(--panel-2); border: 1px solid var(--hairline-strong); color: var(--ink);
+            padding: 12px 18px; border-radius: 12px; font-size: .86rem; box-shadow: var(--shadow);
+            opacity: 0; pointer-events: none; transition: .25s; max-width: 90vw; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast.err { border-color: rgba(200,84,60,.6); }
+        .toast.ok { border-color: rgba(95,158,90,.6); }
+
+        /* ---------------- 登入閘門 ---------------- */
+        .gate { position: fixed; inset: 0; z-index: 90; display: none; align-items: center; justify-content: center;
+            background: radial-gradient(900px 600px at 50% -10%, rgba(212,164,96,.12), transparent 60%), var(--bg); padding: 20px; }
+        body.locked .gate { display: flex; }
+        body.locked .app { filter: blur(3px); pointer-events: none; user-select: none; }
+        .gate-card { width: min(420px, 100%); background: linear-gradient(160deg, var(--panel-2), var(--panel));
+            border: 1px solid var(--hairline-strong); border-radius: 20px; padding: 30px; box-shadow: var(--shadow); }
+        .gate-card .mark { font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; }
+        .gate-card .mark b { color: var(--brass); }
+        .gate-card .sub { color: var(--ink-muted); font-size: .88rem; margin: 6px 0 20px; }
+        .gate-card label { display: block; font-size: .78rem; color: var(--ink-muted); font-weight: 600; margin: 12px 0 6px; }
+        .gate-card input, .field {
+            width: 100%; background: rgba(0,0,0,.25); border: 1px solid var(--hairline);
+            border-radius: 10px; padding: 11px 13px; color: var(--ink); font-size: .95rem; font-family: inherit;
+        }
+        .gate-card input:focus, .field:focus { border-color: var(--brass); }
+        .gate-card .src-pick { display: flex; gap: 8px; margin-bottom: 4px; }
+        .gate-card .src-pick button { flex: 1; }
+        .gate-msg { font-size: .82rem; margin-top: 14px; min-height: 20px; }
+        .gate-msg.err { color: #eaa593; }
+        .gate-msg.ok { color: #9fd097; }
+        .gate-hint { font-size: .74rem; color: var(--ink-faint); margin-top: 16px; line-height: 1.6; }
+
+        footer.foot { color: var(--ink-faint); font-size: .78rem; text-align: center; padding: 30px 16px 50px; }
+
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+        @media (max-width: 640px) {
+            .topbar { flex-wrap: wrap; gap: 10px; }
+            .topbar .mark { font-size: .95rem; }
+            .kpi-row { grid-template-columns: 1fr; }
+            .kpis { grid-template-rows: none; }
+        }
+    </style>
+</head>
+
+<body class="locked">
+
+    <!-- ===== 登入閘門 ===== -->
+    <div class="gate" id="gate">
+        <div class="gate-card">
+            <div class="mark">📒 成本控管<b>中樞</b></div>
+            <p class="sub">連線你的後場資料，查看即時成本率與盤點差異。</p>
+
+            <label>資料來源</label>
+            <div class="src-pick" id="gateSrcPick"></div>
+
+            <form id="gateForm" autocomplete="on">
+                <label for="gu">帳號</label>
+                <input id="gu" type="text" autocomplete="username" required />
+                <label for="gp">密碼</label>
+                <input id="gp" type="password" autocomplete="current-password" required />
+                <button class="btn primary" style="width:100%;margin-top:18px;padding:12px" type="submit" id="gateBtn">登入</button>
+            </form>
+            <div class="gate-msg" id="gateMsg"></div>
+            <p class="gate-hint">此頁只做讀取與成本試算，帳號權限由後端角色決定。<br>首次使用請以具備寫入權限的帳號登入，才能一鍵安裝成本模組。</p>
+        </div>
+    </div>
+
+    <!-- ===== 應用主體 ===== -->
+    <div class="app">
+        <header class="topbar">
+            <div class="mark">📒 成本控管<b>中樞</b></div>
+            <div class="source-switch" id="sourceSwitch" role="group" aria-label="資料來源"></div>
+            <div class="spacer"></div>
+            <div class="who" id="whoami" style="display:none">
+                <span class="dot"></span><span id="whoName"></span>
+            </div>
+            <button class="btn ghost sm" id="logoutBtn" style="display:none">登出</button>
+        </header>
+
+        <main class="wrap">
+            <div class="eyebrow" id="srcEyebrow">後場帳本 · Back of House Ledger</div>
+            <h1 class="page-title">今天的成本，站在目標的哪一邊？</h1>
+            <p class="page-sub">單一北極星指標是<strong>整體加權成本率</strong>——它把每一道菜、每一杯酒的成本與銷售結構壓成一個數字。落差超過 3 個百分點，就該開檢討會。</p>
+
+            <!-- Hero -->
+            <section class="hero">
+                <div class="gauge-card" id="gaugeCard">
+                    <div class="gauge-head">
+                        <span class="lbl">整體加權成本率 · Blended COGS</span>
+                        <span class="gauge-flag" id="gaugeFlag">—</span>
+                    </div>
+                    <div class="gauge-value">
+                        <span class="big" id="gaugeBig">—</span>
+                        <span class="vs">目標 <b id="gaugeTarget">—</b></span>
+                    </div>
+                    <div class="bar">
+                        <div class="fill" id="gaugeFill" style="width:0%"></div>
+                        <div class="target" id="gaugeTargetMark" style="left:0%"></div>
+                    </div>
+                    <div class="bar-legend"><span>0%</span><span>目標線</span><span>60%</span></div>
+
+                    <div class="split">
+                        <div class="chip">
+                            <div class="k">品項數（已計價）</div>
+                            <div class="v num" id="splitCount">—</div>
+                            <div class="sub">來自 RecipeCost</div>
+                        </div>
+                        <div class="chip">
+                            <div class="k">加權平均貢獻毛利</div>
+                            <div class="v num" id="splitCM">—</div>
+                            <div class="sub">CM 定價第一指標</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="kpis">
+                    <div class="kpi-row">
+                        <div class="kpi"><div class="k">🔴 超標品項</div><div class="v num" id="kpiOver">—</div></div>
+                        <div class="kpi"><div class="k">📉 本期盤點差異</div><div class="v num" id="kpiVar">—</div></div>
+                    </div>
+                    <div class="kpi-row">
+                        <div class="kpi"><div class="k">🧾 品項主檔</div><div class="v num" id="kpiIng">—</div></div>
+                        <div class="kpi"><div class="k">⏳ 待重新比價</div><div class="v num" id="kpiStale">—</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 分頁 -->
+            <nav class="tabs" role="tablist" id="tabs">
+                <button class="tab" role="tab" aria-selected="true" data-tab="recipe">配方成本 <span class="badge" id="tb-recipe"></span></button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="ingredient">品項主檔 <span class="badge" id="tb-ingredient"></span></button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="stock">盤點差異 <span class="badge" id="tb-stock"></span></button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="map">成本 × 毛利定位圖</button>
+            </nav>
+
+            <section id="views"></section>
+        </main>
+
+        <footer class="foot">
+            成本控管中樞 · 連線 Google Apps Script（Food / Beverage API + CostControl.gs）· 數字皆以未稅淨售價為分母
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    /* =========================================================================
+       1) 端點與登入狀態（每個來源各自保存 token）
+    ========================================================================= */
+    const ENDPOINTS = window.__COST_ENDPOINTS__ || {};
+    const SRC_KEYS = Object.keys(ENDPOINTS);
+    let currentSrc = localStorage.getItem('costHubSrc') || SRC_KEYS[0];
+    if (!ENDPOINTS[currentSrc]) currentSrc = SRC_KEYS[0];
+
+    const authBySrc = {}; // { food: {user, accessToken, refreshToken}, ... }
+    function loadAuth() {
+        try {
+            const raw = localStorage.getItem('costHubAuth');
+            if (raw) Object.assign(authBySrc, JSON.parse(raw));
+        } catch (e) { localStorage.removeItem('costHubAuth'); }
+    }
+    function saveAuth() { localStorage.setItem('costHubAuth', JSON.stringify(authBySrc)); }
+    function curAuth() { return authBySrc[currentSrc] || null; }
+    loadAuth();
+
+    /* =========================================================================
+       2) GAS 客戶端（沿用既有專案的可靠寫法：text/plain POST + 指數退避重試）
+    ========================================================================= */
+    const gas = {
+        config: { timeoutGet: 20000, timeoutPost: 30000, maxRetries: 2, retryBaseDelay: 700 },
+
+        _clean(v) {
+            let s = (v || '').replace(/[\u200B-\u200F\u2060\uFEFF\u00A0]/g, '').replace(/\s+/g, '').trim().replace(/\/+$/, '');
+            if (!s) return '';
+            if (/^http:\/\//i.test(s)) s = s.replace(/^http:\/\//i, 'https://');
+            if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+            return s;
+        },
+        _urlFor(src) {
+            const e = ENDPOINTS[src]; const u = this._clean(e && e.url);
+            if (!u || /REPLACE_WITH/.test(u)) throw new Error(`「${e ? e.label : src}」尚未設定 /exec 網址，請編輯 index.html 頂端的 __COST_ENDPOINTS__`);
+            return u;
+        },
+        _sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
+        _retriable(status, err) {
+            if (status && [429, 500, 502, 503, 504].includes(status)) return true;
+            if (!err) return false;
+            return err.name === 'AbortError' || err.name === 'TypeError' || /Failed to fetch|NetworkError/i.test(err.message || '');
+        },
+        _friendly(err) {
+            const m = err && err.message ? err.message : String(err);
+            if (err && err.name === 'AbortError') return '連線逾時，請檢查網路或稍後再試';
+            if (/Failed to fetch|NetworkError/i.test(m)) return '無法連線到後端，請確認 /exec 網址與網路';
+            if (/CORS/i.test(m)) return 'CORS 問題：Web App 存取權限需設為「任何人」並重新部署';
+            return m;
+        },
+
+        async _request(src, opts = {}) {
+            const base = this._urlFor(src);
+            const isPost = opts.method === 'POST';
+            const timeout = isPost ? this.config.timeoutPost : this.config.timeoutGet;
+            const maxRetries = (opts.retries != null) ? opts.retries : this.config.maxRetries;
+            let target = base;
+            if (!isPost) {
+                const qs = new URLSearchParams(opts.query || {}); qs.set('_t', Date.now());
+                target = `${base}?${qs}`;
+            }
+            let lastErr = null;
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                if (attempt > 0) await this._sleep(Math.round(this.config.retryBaseDelay * 2 ** (attempt - 1) + Math.random() * 250));
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const fo = { method: opts.method || 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller.signal };
+                    if (isPost) { fo.headers = { 'Content-Type': 'text/plain;charset=utf-8' }; fo.body = JSON.stringify(opts.body || {}); }
+                    const res = await fetch(target, fo);
+                    clearTimeout(timer);
+                    if (!res.ok) { const e = new Error(`HTTP ${res.status}`); if (this._retriable(res.status) && attempt < maxRetries) { lastErr = e; continue; } throw e; }
+                    const text = (await res.text() || '').trim();
+                    if (!text) throw new Error('伺服器回應為空（部署可能未生效，請重新部署新版本）');
+                    if (text[0] === '<') throw new Error('回應為網頁而非資料：請確認 Web App「執行身分＝我、存取＝任何人」並用最新 /exec');
+                    return JSON.parse(text);
+                } catch (err) {
+                    clearTimeout(timer); lastErr = err;
+                    if (this._retriable(null, err) && attempt < maxRetries) continue;
+                    break;
+                }
+            }
+            throw new Error(this._friendly(lastErr));
+        },
+
+        // 帶自動換發 token 的 GET
+        async authedGet(action, query = {}) {
+            const a = authBySrc[currentSrc] || {};
+            const doReq = () => this._request(currentSrc, { method: 'GET', query: { action, token: a.accessToken || '', ...query } });
+            let json = await doReq();
+            if (json && json.ok === false && /未授權|token|view_data/.test(json.error || '')) {
+                if (await auth.tryRefresh()) json = await this._request(currentSrc, { method: 'GET', query: { action, token: (authBySrc[currentSrc] || {}).accessToken || '', ...query } });
+            }
+            return json;
+        },
+        async authedPost(action, body = {}) {
+            const a = authBySrc[currentSrc] || {};
+            let json = await this._request(currentSrc, { method: 'POST', body: { action, token: a.accessToken || '', ...body } });
+            if (json && json.ok === false && /未授權|token/.test(json.error || '')) {
+                if (await auth.tryRefresh()) json = await this._request(currentSrc, { method: 'POST', body: { action, token: (authBySrc[currentSrc] || {}).accessToken || '', ...body } });
+            }
+            return json;
+        },
+
+        async login(src, username, password) {
+            const json = await this._request(src, { method: 'POST', body: { action: 'login', username, password, userAgent: navigator.userAgent }, retries: 0 });
+            if (!json.ok) throw new Error(json.error || '登入失敗');
+            return json.data;
+        },
+        async refresh(src, refreshToken) {
+            const json = await this._request(src, { method: 'POST', body: { action: 'refresh_token', refreshToken }, retries: 0 });
+            if (!json.ok) throw new Error(json.error || 'refresh 失敗');
+            return json.data;
+        },
+        async logout(src, refreshToken, accessToken) {
+            try { await this._request(src, { method: 'POST', body: { action: 'logout', refreshToken, token: accessToken }, retries: 0 }); } catch (e) {}
+        },
+
+        // ---- 成本模組 API ----
+        async listRecipeCost() { const j = await this.authedGet('list_recipe_cost'); if (!j.ok) throw new Error(j.error); return j.data || []; },
+        async listIngredientCost() { const j = await this.authedGet('list_ingredient_cost'); if (!j.ok) throw new Error(j.error); return j.data || []; },
+        async listStockCount() { const j = await this.authedGet('list_stock_count'); if (!j.ok) throw new Error(j.error); return j.data || []; },
+        async listBom(recipeId) { const j = await this.authedGet('list_bom', { recipe_id: recipeId }); if (!j.ok) throw new Error(j.error); return j.data || []; },
+        async setupModule() { const j = await this.authedPost('setup_cost_module'); if (!j.ok) throw new Error(j.error); return j.message; },
+        async bootstrapBom() { const j = await this.authedPost('bootstrap_bom'); if (!j.ok) throw new Error(j.error); return j.data; },
+        async calcAll() { const j = await this.authedPost('calc_all_recipe_costs'); if (!j.ok) throw new Error(j.error); return j.data; }
+    };
+
+    /* =========================================================================
+       3) 認證流程
+    ========================================================================= */
+    const auth = {
+        async tryRefresh() {
+            const a = authBySrc[currentSrc];
+            if (!a || !a.refreshToken) return false;
+            try { const d = await gas.refresh(currentSrc, a.refreshToken); a.accessToken = d.accessToken || d.token; saveAuth(); return true; }
+            catch (e) { delete authBySrc[currentSrc]; saveAuth(); render(); return false; }
+        },
+        isLoggedIn() { const a = curAuth(); return !!(a && a.accessToken); },
+        async doLogin(username, password) {
+            const d = await gas.login(currentSrc, username, password);
+            if (!d || !d.success) throw new Error((d && d.error) || '登入失敗');
+            authBySrc[currentSrc] = { user: d.user, accessToken: d.accessToken || d.token, refreshToken: d.refreshToken };
+            saveAuth();
+        },
+        async doLogout() {
+            const a = curAuth();
+            if (a) await gas.logout(currentSrc, a.refreshToken, a.accessToken);
+            delete authBySrc[currentSrc]; saveAuth(); render();
+        }
+    };
+
+    /* =========================================================================
+       4) 工具
+    ========================================================================= */
+    const $ = s => document.querySelector(s);
+    const nf0 = n => 'NT$' + Math.round(Number(n) || 0).toLocaleString('en-US');
+    const nf2 = n => 'NT$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const pct = n => ((Number(n) || 0) * 100).toFixed(1) + '%';
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const num = v => { const n = Number(v); return isNaN(n) ? 0 : n; };
+
+    let toastTimer;
+    function toast(msg, type = '') {
+        const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + type;
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+    }
+
+    // 內存資料快取（每來源分開）
+    const cache = {}; // { food: {recipe, ingredient, stock, loadedAt} }
+    function bucket() { return cache[currentSrc] || (cache[currentSrc] = {}); }
+
+    /* =========================================================================
+       5) 主渲染
+    ========================================================================= */
+    let activeTab = 'recipe';
+
+    function buildSourceSwitch() {
+        const wrap = $('#sourceSwitch');
+        wrap.innerHTML = SRC_KEYS.map(k => {
+            const e = ENDPOINTS[k];
+            return `<button data-src="${k}" aria-pressed="${k === currentSrc}">${e.icon} ${esc(e.label)}</button>`;
+        }).join('');
+        wrap.querySelectorAll('button').forEach(b => b.addEventListener('click', () => switchSource(b.dataset.src)));
+
+        const pick = $('#gateSrcPick');
+        pick.innerHTML = SRC_KEYS.map(k => {
+            const e = ENDPOINTS[k];
+            return `<button type="button" class="btn ${k === currentSrc ? 'primary' : ''}" data-src="${k}">${e.icon} ${esc(e.label)}</button>`;
+        }).join('');
+        pick.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+            currentSrc = b.dataset.src; localStorage.setItem('costHubSrc', currentSrc);
+            pick.querySelectorAll('button').forEach(x => x.classList.toggle('primary', x.dataset.src === currentSrc));
+            $('#gateMsg').textContent = '';
+        }));
+    }
+
+    async function switchSource(src) {
+        if (src === currentSrc) return;
+        currentSrc = src; localStorage.setItem('costHubSrc', src);
+        render();
+        if (auth.isLoggedIn()) loadData();
+    }
+
+    function render() {
+        buildSourceSwitch();
+        const e = ENDPOINTS[currentSrc];
+        $('#srcEyebrow').textContent = `${e.icon} ${e.label} · 後場帳本`;
+        document.querySelectorAll('#sourceSwitch button').forEach(b => b.setAttribute('aria-pressed', b.dataset.src === currentSrc));
+
+        if (!auth.isLoggedIn()) { document.body.classList.add('locked'); return; }
+        document.body.classList.remove('locked');
+        const a = curAuth();
+        $('#whoami').style.display = 'flex';
+        $('#whoName').textContent = (a.user && (a.user.username || a.user.email)) || '已登入';
+        $('#logoutBtn').style.display = '';
+
+        renderHero();
+        renderTabs();
+        renderView();
+    }
+
+    /* ---- Hero ---- */
+    function computeStats() {
+        const b = bucket();
+        const recipe = b.recipe || [], ing = b.ingredient || [], stock = b.stock || [];
+        const priced = recipe.filter(r => num(r.net_price) > 0 && num(r.total_cost) > 0);
+        let totCost = 0, totNet = 0, cmSum = 0, cmQty = 0, over = 0;
+        priced.forEach(r => {
+            const q = 1; // RecipeCost 無銷量欄位 → 以品項為單位加權；有 PosSales 時可改為實際銷量
+            totCost += num(r.total_cost) * q; totNet += num(r.net_price) * q;
+            cmSum += num(r.contribution_margin) * q; cmQty += q;
+            if (num(r.cost_rate) > num(r.target_cost_rate) + 0.0001) over++;
+        });
+        const blended = totNet > 0 ? totCost / totNet : 0;
+        const target = priced.length ? priced.reduce((s, r) => s + num(r.target_cost_rate), 0) / priced.length : 0.3;
+        const varAmt = stock.reduce((s, r) => s + num(r.variance_amount), 0);
+        const now = Date.now();
+        const stale = ing.filter(r => {
+            const d = String(r.price_date || ''); if (!d) return true;
+            const t = Date.parse(d); return isNaN(t) ? false : (now - t) / 86400000 > 60;
+        }).length;
+        return { priced, blended, target, avgCM: cmQty ? cmSum / cmQty : 0, over, varAmt, ingCount: ing.length, stale };
+    }
+
+    function renderHero() {
+        const s = computeStats();
+        const flag = $('#gaugeFlag');
+        $('#gaugeBig').textContent = s.priced.length ? pct(s.blended) : '—';
+        $('#gaugeTarget').textContent = pct(s.target);
+        const scale = v => Math.max(0, Math.min(100, (v / 0.6) * 100));
+        $('#gaugeFill').style.width = scale(s.blended) + '%';
+        $('#gaugeTargetMark').style.left = scale(s.target) + '%';
+
+        const diff = s.blended - s.target;
+        let col, txt, fillCol;
+        if (!s.priced.length) { col = 'var(--ink-faint)'; txt = '尚無資料'; fillCol = 'var(--ink-faint)'; }
+        else if (diff <= 0.005) { col = 'var(--ok)'; txt = '🟢 達標'; fillCol = 'linear-gradient(90deg,#4f8a4a,#6bb063)'; }
+        else if (diff <= 0.03) { col = 'var(--warn)'; txt = '🟡 略高 +' + (diff * 100).toFixed(1) + 'pt'; fillCol = 'linear-gradient(90deg,#c99027,#e0b34e)'; }
+        else { col = 'var(--bad)'; txt = '🔴 超標 +' + (diff * 100).toFixed(1) + 'pt'; fillCol = 'linear-gradient(90deg,#b64a34,#d16a4f)'; }
+        flag.textContent = txt; flag.style.color = '#1c140a'; flag.style.background = col;
+        $('#gaugeFill').style.background = fillCol;
+
+        $('#splitCount').textContent = s.priced.length || '—';
+        $('#splitCM').textContent = s.priced.length ? nf0(s.avgCM) : '—';
+        $('#kpiOver').innerHTML = s.priced.length ? s.over + ' <small>/ ' + s.priced.length + '</small>' : '—';
+        $('#kpiVar').innerHTML = (bucket().stock || []).length ? `<span class="${s.varAmt < 0 ? 'amt-neg' : 'amt-pos'}">${nf0(s.varAmt)}</span>` : '—';
+        $('#kpiIng').textContent = s.ingCount || '—';
+        $('#kpiStale').innerHTML = s.ingCount ? s.stale + ' <small>項 &gt;60天</small>' : '—';
+    }
+
+    /* ---- Tabs ---- */
+    function renderTabs() {
+        const b = bucket();
+        $('#tb-recipe').textContent = (b.recipe || []).length || '';
+        $('#tb-ingredient').textContent = (b.ingredient || []).length || '';
+        $('#tb-stock').textContent = (b.stock || []).length || '';
+        document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === activeTab));
+    }
+
+    /* ---- Views ---- */
+    function renderView() {
+        const b = bucket();
+        if (b._loading) { $('#views').innerHTML = skeleton(); return; }
+        if (activeTab === 'recipe') return renderRecipe(b.recipe || []);
+        if (activeTab === 'ingredient') return renderIngredient(b.ingredient || []);
+        if (activeTab === 'stock') return renderStock(b.stock || []);
+        if (activeTab === 'map') return renderMap(b.recipe || []);
+    }
+
+    function skeleton() {
+        return `<div class="skeleton"><div class="line" style="width:40%"></div>
+            ${Array(6).fill('<div class="line"></div>').join('')}</div>`;
+    }
+
+    function emptyInstall(title, desc, extra) {
+        const canWrite = true;
+        return `<div class="empty">
+            <div class="em">🗂️</div>
+            <h3>${esc(title)}</h3>
+            <p>${desc}</p>
+            <div class="row">
+                <button class="btn primary" id="btnSetup">一鍵安裝成本模組</button>
+                ${extra || ''}
+                <button class="btn ghost" id="btnReload">重新讀取</button>
+            </div>
+        </div>`;
+    }
+
+    // 成本率相對目標的 pill
+    function ratePill(rate, target) {
+        const r = num(rate), t = num(target) || 0.3;
+        let cls = 'under';
+        if (r > t + 0.0001) cls = 'over'; else if (r > t - 0.03) cls = 'near';
+        return `<span class="rate-pill ${cls}">${pct(r)}</span>`;
+    }
+
+    function renderRecipe(rows) {
+        if (!rows.length) {
+            $('#views').innerHTML = emptyInstall('還沒有配方成本',
+                '安裝成本模組後，可從既有酒譜／食譜反解析出 BOM，再一鍵重算所有配方成本。',
+                '<button class="btn" id="btnBootstrap">反解析既有配方為 BOM</button><button class="btn" id="btnCalc">重算全部成本</button>');
+            bindInstall(); return;
+        }
+        const sorted = [...rows].sort((a, b) => num(b.contribution_margin) - num(a.contribution_margin));
+        const body = sorted.map(r => {
+            const over = num(r.cost_rate) > num(r.target_cost_rate) + 0.0001;
+            return `<tr>
+                <td class="name">${esc(r.title || r.recipe_id)}<div class="muted" style="font-weight:400;font-size:.75rem">${esc(r.recipe_id)} · ${esc(r.menu_section || r.item_type || '')}</div></td>
+                <td class="n">${nf2(r.total_cost)}</td>
+                <td class="n">${nf0(r.menu_price)}</td>
+                <td class="n">${nf2(r.net_price)}</td>
+                <td class="n">${ratePill(r.cost_rate, r.target_cost_rate)}</td>
+                <td class="n muted">${pct(r.target_cost_rate)}</td>
+                <td class="n" style="font-weight:600">${nf0(r.contribution_margin)}</td>
+                <td class="n">${num(r.suggested_price) ? nf0(r.suggested_price) : '—'}</td>
+            </tr>`;
+        }).join('');
+        const totCM = rows.reduce((s, r) => s + num(r.contribution_margin), 0);
+        $('#views').innerHTML = tableShell('配方成本', rows.length + ' 項', `
+            <table class="ledger">
+              <thead><tr>
+                <th>品項</th><th class="n">總成本</th><th class="n">標價(含稅)</th><th class="n">淨售價</th>
+                <th class="n">成本率</th><th class="n">目標</th><th class="n">貢獻毛利</th><th class="n">建議售價</th>
+              </tr></thead>
+              <tbody>${body}</tbody>
+              <tfoot><tr><td class="lbl">合計貢獻毛利</td><td colspan="5"></td><td>${nf0(totCM)}</td><td></td></tr></tfoot>
+            </table>`, '<button class="btn sm" id="btnCalc">重算全部成本</button>');
+        bindInstall();
+        wireSearch('table.ledger tbody tr');
+    }
+
+    function renderIngredient(rows) {
+        if (!rows.length) { $('#views').innerHTML = emptyInstall('還沒有品項成本主檔', '安裝模組後，系統會為每一個既有食材／配料建立一列成本擴充，等你填入採購價與出品率。'); bindInstall(); return; }
+        const now = Date.now();
+        const body = rows.map(r => {
+            const stale = (() => { const t = Date.parse(String(r.price_date || '')); return isNaN(t) ? true : (now - t) / 86400000 > 60; })();
+            const eff = num(r.effective_cost);
+            return `<tr>
+                <td class="name">${esc(r.ingredient_id)}</td>
+                <td class="n">${eff ? eff.toFixed(4) : '<span class="muted">未填</span>'}</td>
+                <td class="n muted">${num(r.unit_cost) ? num(r.unit_cost).toFixed(4) : '—'}</td>
+                <td class="n">${r.yield_rate !== '' ? pct(r.yield_rate) : '—'}</td>
+                <td class="n">${r.waste_rate !== '' ? pct(r.waste_rate) : '—'}</td>
+                <td class="n">${num(r.par_level) || '—'}</td>
+                <td class="n">${num(r.safety_stock) || '—'}</td>
+                <td class="${stale ? '' : 'muted'}">${stale ? '<span class="light warn">需比價</span>' : esc(String(r.price_date || '').slice(0, 10))}</td>
+            </tr>`;
+        }).join('');
+        $('#views').innerHTML = tableShell('品項成本主檔', rows.length + ' 項', `
+            <table class="ledger">
+              <thead><tr>
+                <th>食材 ID</th><th class="n">有效單位成本</th><th class="n">標準單位成本</th><th class="n">出品率</th>
+                <th class="n">損耗率</th><th class="n">PAR</th><th class="n">安全庫存</th><th>最後報價</th>
+              </tr></thead>
+              <tbody>${body}</tbody>
+            </table>`);
+        wireSearch('table.ledger tbody tr');
+    }
+
+    function renderStock(rows) {
+        if (!rows.length) { $('#views').innerHTML = emptyInstall('還沒有盤點紀錄', '安裝模組後，前場人員盤點的實際數量會與「理論期末」自動比對，產生差異金額與三色號誌。'); bindInstall(); return; }
+        const sorted = [...rows].sort((a, b) => Math.abs(num(b.variance_rate)) - Math.abs(num(a.variance_rate)));
+        const lightOf = f => f === 'GREEN' ? '<span class="light ok">正常</span>' : f === 'YELLOW' ? '<span class="light warn">注意</span>' : '<span class="light bad">異常</span>';
+        const body = sorted.map(r => `<tr>
+                <td class="muted">${esc(String(r.count_date || '').slice(0, 10))}</td>
+                <td class="name">${esc(r.ingredient_id)}<div class="muted" style="font-weight:400;font-size:.75rem">${esc(r.frequency || '')}</div></td>
+                <td class="n">${num(r.theoretical_end).toLocaleString()}</td>
+                <td class="n">${num(r.actual_qty).toLocaleString()}</td>
+                <td class="n ${num(r.variance_qty) < 0 ? 'amt-neg' : ''}">${num(r.variance_qty).toLocaleString()}</td>
+                <td class="n ${num(r.variance_amount) < 0 ? 'amt-neg' : 'amt-pos'}">${nf2(r.variance_amount)}</td>
+                <td class="n">${pct(r.variance_rate)}</td>
+                <td>${lightOf(r.flag)}</td>
+                <td class="muted">${esc(r.reason || '')}</td>
+            </tr>`).join('');
+        const tot = rows.reduce((s, r) => s + num(r.variance_amount), 0);
+        $('#views').innerHTML = tableShell('盤點差異分析', rows.length + ' 筆', `
+            <table class="ledger">
+              <thead><tr>
+                <th>日期</th><th>品項</th><th class="n">理論期末</th><th class="n">實際</th><th class="n">差異量</th>
+                <th class="n">差異金額</th><th class="n">差異率</th><th>號誌</th><th>原因</th>
+              </tr></thead>
+              <tbody>${body}</tbody>
+              <tfoot><tr><td class="lbl">差異總金額</td><td colspan="4"></td><td class="${tot < 0 ? 'amt-neg' : ''}">${nf2(tot)}</td><td colspan="3"></td></tr></tfoot>
+            </table>`);
+        wireSearch('table.ledger tbody tr');
+    }
+
+    function renderMap(rows) {
+        const priced = rows.filter(r => num(r.net_price) > 0 && num(r.total_cost) > 0);
+        if (!priced.length) { $('#views').innerHTML = emptyInstall('定位圖需要配方成本', '先在「配方成本」分頁重算成本，這裡就會畫出成本率 × 貢獻毛利的四象限定位圖。'); bindInstall(); return; }
+        const cms = priced.map(r => num(r.contribution_margin)).sort((a, b) => a - b);
+        const medCM = cms[Math.floor(cms.length / 2)];
+        const maxCM = Math.max(...cms, 1);
+        // x = 成本率相對目標（左低右高），y = 貢獻毛利（下低上高）
+        const quads = { star: [], plow: [], puzzle: [], dog: [] };
+        const dots = priced.map(r => {
+            const over = num(r.cost_rate) > num(r.target_cost_rate);
+            const highCM = num(r.contribution_margin) >= medCM;
+            const q = !over && highCM ? 'star' : over && highCM ? 'puzzle' : !over && !highCM ? 'plow' : 'dog';
+            quads[q].push(r);
+            const x = Math.max(4, Math.min(96, (num(r.cost_rate) / 0.5) * 100));
+            const y = Math.max(4, Math.min(96, (num(r.contribution_margin) / maxCM) * 92));
+            const col = q === 'star' ? '#5f9e5a' : q === 'puzzle' ? '#d1972f' : q === 'plow' ? '#6a94c9' : '#c8543c';
+            return `<div class="dot" style="left:${x}%;bottom:${y}%;background:${col}" title="${esc(r.title || r.recipe_id)} · 成本率 ${pct(r.cost_rate)} · 毛利 ${nf0(r.contribution_margin)}"></div>`;
+        }).join('');
+        const legend = [
+            ['star', '#5f9e5a', '⭐ 明星', '成本達標＋高毛利：放菜單黃金區，嚴禁降規', quads.star.length],
+            ['puzzle', '#d1972f', '❓ 問題', '毛利高但成本超標：優化配方或小幅調價', quads.puzzle.length],
+            ['plow', '#6a94c9', '🐄 金牛', '成本達標但毛利偏低：靠加購／佐酒拉客單', quads.plow.length],
+            ['dog', '#c8543c', '🐕 瘦狗', '成本超標＋低毛利：考慮下架或改造套餐', quads.dog.length],
+        ].map(([k, c, t, d, n]) => `<div class="qrow"><span class="qdot" style="background:${c}"></span><div><div class="qt">${t}</div><div class="qd">${d}</div></div><span class="qc num">${n}</span></div>`).join('');
+        $('#views').innerHTML = `
+            <div class="map-card">
+              <div class="panel-head"><h2>成本 × 貢獻毛利定位圖</h2>
+                <span class="page-sub" style="margin:0;font-size:.82rem">縱軸＝貢獻毛利，橫軸＝成本率（相對各自目標）。匯入 PosSales 銷量後可切換為完整 BCG（人氣 × 毛利）。</span></div>
+              <div class="map-wrap">
+                <div class="scatter">
+                  <div class="axis" style="left:50%;top:0;bottom:0;width:1px"></div>
+                  <div class="axis" style="top:50%;left:0;right:0;height:1px"></div>
+                  <div class="qlabel" style="left:10px;top:10px">高毛利 · 成本佳</div>
+                  <div class="qlabel" style="right:10px;top:10px">高毛利 · 成本高</div>
+                  <div class="qlabel" style="left:10px;bottom:10px">低毛利 · 成本佳</div>
+                  <div class="qlabel" style="right:10px;bottom:10px">低毛利 · 成本高</div>
+                  ${dots}
+                </div>
+                <div class="maplegend">${legend}</div>
+              </div>
+            </div>`;
+    }
+
+    function tableShell(title, count, inner, extraTool) {
+        return `<div class="panel-head">
+            <h2>${esc(title)}</h2>
+            <div class="tools">
+                <input class="search" id="viewSearch" placeholder="🔍 篩選…" />
+                ${extraTool || ''}
+            </div>
+          </div>
+          <div class="sheet"><div class="sheet-scroll">${inner}</div></div>`;
+    }
+
+    function wireSearch(rowSel) {
+        const box = $('#viewSearch'); if (!box) return;
+        box.addEventListener('input', () => {
+            const q = box.value.trim().toLowerCase();
+            document.querySelectorAll(rowSel).forEach(tr => {
+                tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    }
+
+    function bindInstall() {
+        const setup = $('#btnSetup'); if (setup) setup.addEventListener('click', doSetup);
+        const boot = $('#btnBootstrap'); if (boot) boot.addEventListener('click', doBootstrap);
+        const calc = $('#btnCalc'); if (calc) calc.addEventListener('click', doCalc);
+        const rl = $('#btnReload'); if (rl) rl.addEventListener('click', () => loadData(true));
+    }
+
+    async function doSetup() {
+        try { toast('正在安裝成本模組…'); const m = await gas.setupModule(); toast('✅ ' + m, 'ok'); await loadData(true); }
+        catch (e) { toast('⌫ ' + e.message, 'err'); }
+    }
+    async function doBootstrap() {
+        try { toast('正在反解析既有配方…'); const r = await gas.bootstrapBom(); toast(`✅ 已建立 ${r.created} 列 BOM，${r.unresolved} 列待人工補齊`, 'ok'); await doCalc(); }
+        catch (e) { toast('⌫ ' + e.message, 'err'); }
+    }
+    async function doCalc() {
+        try { toast('正在重算所有配方成本…'); const r = await gas.calcAll(); toast(`✅ 已重算 ${r.length} 項`, 'ok'); await loadData(true); }
+        catch (e) { toast('⌫ ' + e.message, 'err'); }
+    }
+
+    /* =========================================================================
+       6) 資料載入
+    ========================================================================= */
+    async function loadData(force) {
+        if (!auth.isLoggedIn()) return;
+        const b = bucket();
+        if (!force && b.loadedAt) { render(); return; }
+        b._loading = true; renderView();
+        try {
+            const [recipe, ingredient, stock] = await Promise.all([
+                gas.listRecipeCost().catch(() => []),
+                gas.listIngredientCost().catch(() => []),
+                gas.listStockCount().catch(() => [])
+            ]);
+            b.recipe = recipe; b.ingredient = ingredient; b.stock = stock; b.loadedAt = Date.now();
+        } catch (e) { toast('⌫ 讀取失敗：' + e.message, 'err'); }
+        finally { b._loading = false; render(); }
+    }
+
+    /* =========================================================================
+       7) 事件綁定 + 啟動
+    ========================================================================= */
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+        activeTab = t.dataset.tab; renderTabs(); renderView();
+    }));
+
+    $('#logoutBtn').addEventListener('click', () => auth.doLogout());
+
+    $('#gateForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const u = $('#gu').value.trim(), p = $('#gp').value;
+        const msg = $('#gateMsg'), btn = $('#gateBtn');
+        if (!u || !p) { msg.className = 'gate-msg err'; msg.textContent = '請輸入帳號與密碼'; return; }
+        btn.disabled = true; msg.className = 'gate-msg'; msg.textContent = '正在驗證…';
+        try {
+            await auth.doLogin(u, p);
+            msg.className = 'gate-msg ok'; msg.textContent = '登入成功';
+            $('#gp').value = '';
+            render(); loadData(true);
+        } catch (err) {
+            msg.className = 'gate-msg err'; msg.textContent = '登入失敗：' + err.message;
+        } finally { btn.disabled = false; }
+    });
+
+    // 啟動
+    buildSourceSwitch();
+    render();
+    if (auth.isLoggedIn()) loadData();
+    // 每 45 分鐘主動換發 token（伺服器預設 60 分過期）
+    setInterval(() => { if (auth.isLoggedIn()) auth.tryRefresh(); }, 45 * 60 * 1000);
+    </script>
+</body>
+
+</html>
